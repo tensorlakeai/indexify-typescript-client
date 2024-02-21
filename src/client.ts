@@ -90,6 +90,19 @@ class IndexifyClient {
     return extractorsData.map((data) => new Extractor(data));
   }
 
+  async searchIndex(
+    name: string,
+    query: string,
+    topK: number
+  ): Promise<IContentMetadata[]> {
+    const resp = await this.client.post("search", {
+      index: name,
+      query,
+      k: topK,
+    });
+    return resp.data["results"];
+  }
+
   async getContent(
     parent_id?: string,
     labels_eq?: string
