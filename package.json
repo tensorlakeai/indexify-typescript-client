@@ -1,0 +1,36 @@
+{
+  "name": "indexify-typescript-client",
+  "version": "0.0.9",
+  "description": "This is the TypeScript client for interacting with the Indexify service.",
+  "main": "./dist/index.ts",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "jest",
+    "build": "tsup"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tensorlakeai/indexify-typescript-client.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tensorlakeai/indexify-typescript-client/issues"
+  },
+  "homepage": "https://github.com/tensorlakeai/indexify-typescript-client#readme",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "axios": "^1.6.7"
+  }
+}
