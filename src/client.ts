@@ -1,4 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
+import * as fs from "fs";
+import FormData from "form-data";
 import Extractor from "./extractor";
 import {
   IContent,
@@ -8,6 +10,9 @@ import {
   IIndex,
   INamespace,
   ITask,
+  IAddExtractorPolicyResponse,
+  IDocument,
+  ISearchDocument,
 } from "./types";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
@@ -42,7 +47,24 @@ class IndexifyClient {
     return new IndexifyClient(
       serviceUrl,
       namespace,
-      response.data.namespace.extraction_policies
+      response.data.namespace.extraction_policies.map(
+        (item: {
+          name: string;
+          extractor: string;
+          filters_eq: string;
+          input_params: Record<string, string | number>;
+          content_source: string;
+        }) => {
+          // abstraction for filters_eq
+          return {
+            name: item.name,
+            extractor: item.extractor,
+            labels_eq: item.filters_eq,
+            input_params: item.input_params,
+            content_source: item.content_source,
+          };
+        }
+      ) as IExtractionPolicy[]
     );
   }
 
@@ -70,13 +92,23 @@ class IndexifyClient {
     return this.request("GET", endpoint);
   }
 
-  async post(endpoint: string): Promise<AxiosResponse> {
-    return this.request("POST", endpoint);
-  }
-
   static async namespaces(): Promise<INamespace[]> {
     const response = await axios.get(`${DEFAULT_SERVICE_URL}/namespaces`);
     return response.data.namespaces;
+  }
+
+  static async createNamespace(
+    namespace: string,
+    extraction_policies?: IExtractionPolicy[],
+    labels?: Record<string, string>
+  ) {
+    await axios.post(`${DEFAULT_SERVICE_URL}/namespaces`, {
+      name: namespace,
+      extraction_policies: extraction_policies ?? [],
+      labels: labels ?? {},
+    });
+    const client = await IndexifyClient.createClient({ namespace });
+    return client;
   }
 
   async indexes(): Promise<IIndex[]> {
@@ -85,7 +117,7 @@ class IndexifyClient {
   }
 
   async extractors(): Promise<Extractor[]> {
-    const response = await this.get("extractors");
+    const response = await axios.get(`${DEFAULT_SERVICE_URL}/extractors`);
     const extractorsData = response.data.extractors as IExtractor[];
     return extractorsData.map((data) => new Extractor(data));
   }
@@ -94,13 +126,26 @@ class IndexifyClient {
     name: string,
     query: string,
     topK: number
-  ): Promise<IContentMetadata[]> {
+  ): Promise<ISearchDocument[]> {
     const resp = await this.client.post("search", {
       index: name,
       query,
       k: topK,
     });
     return resp.data["results"];
+  }
+
+  async addExtractionPolicy(
+    extractionPolicy: IExtractionPolicy
+  ): Promise<IAddExtractorPolicyResponse> {
+    const resp = await this.client.post("extraction_policies", {
+      extractor: extractionPolicy.extractor,
+      name: extractionPolicy.name,
+      input_params: extractionPolicy.input_params,
+      filters_eq: extractionPolicy.labels_eq,
+      content_source: extractionPolicy.content_source,
+    });
+    return resp.data;
   }
 
   async getContent(
@@ -113,6 +158,50 @@ class IndexifyClient {
     return resp.data.content_list;
   }
 
+  async addDocuments(
+    documents:
+      | IDocument
+      | string
+      | IDocument[]
+      | string[]
+      | (IDocument | string)[]
+  ) {
+    function isIDocument(obj: any): obj is IDocument {
+      return (
+        obj && typeof obj.text === "string" && typeof obj.labels === "object"
+      );
+    }
+
+    let newDocuments: IDocument[] = [];
+
+    if (typeof documents === "string") {
+      newDocuments.push({ text: documents as string, labels: {} });
+    } else if (isIDocument(documents)) {
+      newDocuments.push(documents);
+    } else if (Array.isArray(documents)) {
+      newDocuments = [
+        ...newDocuments,
+        ...(documents.map((item) => {
+          if (isIDocument(item)) {
+            return item;
+          } else if (typeof item === "string") {
+            return { text: item, labels: {} };
+          } else {
+            throw Error(
+              "Invalid Type: Array items must be string or IDocument"
+            );
+          }
+        }) as IDocument[]),
+      ];
+    } else {
+      throw Error(
+        "Invalid type for documents. Expected Document, str, or list of these."
+      );
+    }
+
+    await this.client.post("add_texts", { documents: newDocuments });
+  }
+
   async getContentById(id: string): Promise<IContent> {
     const resp = await this.client.get(`content/${id}`);
     return resp.data.content_list[0];
@@ -123,6 +212,16 @@ class IndexifyClient {
       params: { extraction_policy },
     });
     return resp.data.tasks;
+  }
+
+  async uploadFile(filePath: string): Promise<any> {
+    const formData = new FormData();
+    formData.append("file", fs.createReadStream(filePath));
+    await this.client.post("upload_file", formData, {
+      headers: {
+        ...formData.getHeaders(),
+      },
+    });
   }
 }
 

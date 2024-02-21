@@ -42,11 +42,11 @@ export interface IContent {
 }
 
 export interface IExtractionPolicy {
-  content_source: string;
   extractor: string;
-  filters_eq: Record<string, string>;
-  input_params: { [key: string]: any };
   name: string;
+  labels_eq?: string;
+  input_params: Record<string, string | number>;
+  content_source: string;
 }
 
 export interface ITask {
@@ -60,4 +60,20 @@ export interface ITask {
     embedding: string;
   };
   repository: string;
+}
+
+export interface IDocument {
+  text: string;
+  labels: Record<string, string>;
+}
+
+export interface ISearchDocument {
+  content_id: string;
+  text: string;
+  confidence_score: number;
+  labels: Record<string, string>;
+}
+
+export interface IAddExtractorPolicyResponse {
+  index_names: string[];
 }
