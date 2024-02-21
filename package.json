@@ -1,5 +1,5 @@
 {
-  "name": "indexify-typescript-client",
+  "name": "indexify",
   "version": "0.0.9",
   "description": "This is the TypeScript client for interacting with the Indexify service.",
   "main": "./dist/index.ts",
