@@ -109,3 +109,23 @@ test("Upload file", async () => {
   client.addExtractionPolicy(policy)
   await client.uploadFile(`${__dirname}/files/test.txt`)
 })
+
+
+test("Get content", async () => {
+  const client = await IndexifyClient.createNamespace("testgetcontent");
+  await client.addDocuments([
+    { text: "This is a test1", labels: {source:"test"} },
+    { text: "This is a test2", labels: {source:"test"} },
+  ]);
+  
+  let content
+
+  content = await client.getContent("idontexist")
+  expect(content.length).toBe(0)
+
+  content = await client.getContent(undefined,"source:test")
+  expect(content.length).toBe(2)
+
+  content = await client.getContent(undefined,"source:nothing")
+  expect(content.length).toBe(0)
+})
