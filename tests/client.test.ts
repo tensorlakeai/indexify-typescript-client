@@ -9,17 +9,13 @@ test("Create Client", async () => {
 });
 
 test("Create Namespace", async () => {
-  const policy: IExtractionPolicy = {
-    extractor: "tensorlake/minilm-l6",
-    name: "testpolicy",
-    content_source: "ingestion",
-    input_params: {},
-  };
-  const client = await IndexifyClient.createNamespace(
-    "testnamespace",
-    [policy],
-    {}
-  );
+  const client = await IndexifyClient.createNamespace("testnamespace", [
+    {
+      extractor: "tensorlake/minilm-l6",
+      name: "testpolicy",
+    },
+  ]);
+
   expect(client.namespace).toBe("testnamespace");
   // test get namespaces
   const namespaces = await IndexifyClient.namespaces();
@@ -75,8 +71,6 @@ test("Search", async () => {
   const policy: IExtractionPolicy = {
     extractor: "tensorlake/minilm-l6",
     name: "minilml6",
-    content_source: "ingestion",
-    input_params: {},
     labels_eq: "source:test",
   };
 
@@ -87,14 +81,14 @@ test("Search", async () => {
   const indexName = resp.index_names[0];
 
   await client.addDocuments([
-    { text: "This is a test1", labels: {source:"test"} },
-    { text: "This is a test2", labels: {source:"test"} },
+    { text: "This is a test1", labels: { source: "test" } },
+    { text: "This is a test2", labels: { source: "test" } },
   ]);
 
   await new Promise((r) => setTimeout(r, 10000));
 
   const searchResult = await client.searchIndex(indexName, "test", 3);
-  expect(searchResult.length).toBe(2)
+  expect(searchResult.length).toBe(2);
 });
 
 test("Upload file", async () => {
@@ -106,26 +100,39 @@ test("Upload file", async () => {
   };
 
   const client = await IndexifyClient.createNamespace("testuploadfile");
-  client.addExtractionPolicy(policy)
-  await client.uploadFile(`${__dirname}/files/test.txt`)
-})
-
+  client.addExtractionPolicy(policy);
+  await client.uploadFile(`${__dirname}/files/test.txt`);
+  console.log("done");
+});
 
 test("Get content", async () => {
   const client = await IndexifyClient.createNamespace("testgetcontent");
   await client.addDocuments([
-    { text: "This is a test1", labels: {source:"test"} },
-    { text: "This is a test2", labels: {source:"test"} },
+    { text: "This is a test1", labels: { source: "test" } },
+    { text: "This is a test2", labels: { source: "test" } },
   ]);
-  
-  let content
 
-  content = await client.getContent("idontexist")
-  expect(content.length).toBe(0)
+  let content;
 
-  content = await client.getContent(undefined,"source:test")
-  expect(content.length).toBe(2)
+  content = await client.getContent("idontexist");
+  expect(content.length).toBe(0);
 
-  content = await client.getContent(undefined,"source:nothing")
-  expect(content.length).toBe(0)
-})
+  content = await client.getContent(undefined, "source:test");
+  expect(content.length).toBe(2);
+
+  content = await client.getContent(undefined, "source:nothing");
+  expect(content.length).toBe(0);
+});
+
+test("Get Extraction Policies", async () => {
+  const client = await IndexifyClient.createNamespace("testgetpolicies");
+
+  await client.addExtractionPolicy({
+    extractor: "tensorlake/minilm-l6",
+    name: "minilml6",
+  });
+  expect(client.extractionPolicies.length).toBe(1);
+
+  const policies = await client.getExtractionPolicies();
+  expect(policies.length).toBe(1);
+});

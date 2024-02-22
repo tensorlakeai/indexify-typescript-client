@@ -1,6 +1,4 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
-import * as fs from "fs";
-import FormData from "form-data";
 import Extractor from "./extractor";
 import {
   IContent,
@@ -12,7 +10,7 @@ import {
   ITask,
   IAddExtractorPolicyResponse,
   IDocument,
-  ISearchDocument,
+  ISearchIndexResponse,
 } from "./types";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
@@ -126,7 +124,7 @@ class IndexifyClient {
     name: string,
     query: string,
     topK: number
-  ): Promise<ISearchDocument[]> {
+  ): Promise<ISearchIndexResponse[]> {
     const resp = await this.client.post("search", {
       index: name,
       query,
@@ -143,8 +141,12 @@ class IndexifyClient {
       name: extractionPolicy.name,
       input_params: extractionPolicy.input_params,
       filters_eq: extractionPolicy.labels_eq,
-      content_source: extractionPolicy.content_source,
+      content_source: extractionPolicy.content_source ?? "ingestion",
     });
+
+    // update this.extractor_bindings
+    await this.getExtractionPolicies()
+
     return resp.data;
   }
 
@@ -214,14 +216,41 @@ class IndexifyClient {
     return resp.data.tasks;
   }
 
-  async uploadFile(filePath: string): Promise<any> {
-    const formData = new FormData();
-    formData.append("file", fs.createReadStream(filePath));
-    await this.client.post("upload_file", formData, {
-      headers: {
-        ...formData.getHeaders(),
-      },
-    });
+  async uploadFile(fileInput: string | Blob): Promise<any> {
+    function isBlob(input: any): input is Blob {
+      return input instanceof Blob;
+    }
+
+    if (typeof window === "undefined") {
+      // node
+      if (typeof fileInput !== "string") {
+        throw Error("Expected string")
+      }
+      const FormData = require("form-data");
+      const fs = require("fs");
+      const formData = new FormData();
+      formData.append("file", fs.createReadStream(fileInput as string));
+      await this.client.post("upload_file", formData, {
+        headers: {
+          ...formData.getHeaders(),
+        },
+      });
+    } else {
+      // browser
+      if (!isBlob(fileInput)) {
+        throw Error("Expected blob")
+      }
+      const formData = new FormData();
+      formData.append("file", fileInput);
+      await this.client.post("/upload_file", formData);
+    }
+  }
+
+  async getExtractionPolicies(): Promise<IExtractionPolicy[]> {
+    const resp = await this.client.get("")
+    const policies = resp.data.namespace?.extraction_policies ?? []
+    this.extractionPolicies = policies
+    return policies
   }
 }
 
