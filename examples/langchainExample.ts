@@ -46,7 +46,7 @@ import { formatDocumentsAsString } from "langchain/util/document";
   ]);
 
   const question = "Where is Lucas From?";
-  console.log(`Question?: ${question}`)
+  console.log(`Question: ${question}`)
   const result = await chain.invoke(question);
   console.log(result)
 })();
