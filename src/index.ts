@@ -1,5 +1,6 @@
 import IndexifyClient from "./client";
 import Extractor from "./extractor";
+import { IndexifyRetriever } from "./langchain/retriever";
 import {
   INamespace,
   IEmbeddingSchema,
@@ -15,6 +16,7 @@ import {
 
 export {
   IndexifyClient,
+  IndexifyRetriever,
   Extractor,
   INamespace,
   IEmbeddingSchema,
