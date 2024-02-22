@@ -45,8 +45,8 @@ export interface IExtractionPolicy {
   extractor: string;
   name: string;
   labels_eq?: string;
-  input_params: Record<string, string | number>;
-  content_source: string;
+  input_params?: Record<string, string | number>;
+  content_source?: string;
 }
 
 export interface ITask {
@@ -67,7 +67,7 @@ export interface IDocument {
   labels: Record<string, string>;
 }
 
-export interface ISearchDocument {
+export interface ISearchIndexResponse {
   content_id: string;
   text: string;
   confidence_score: number;
