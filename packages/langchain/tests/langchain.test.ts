@@ -1,3 +1,5 @@
+import { IndexifyClient } from "../../../src";
+import { IndexifyRetriever } from "../src";
 import { ChatOpenAI } from "@langchain/openai";
 import {
   RunnableSequence,
@@ -5,10 +7,13 @@ import {
 } from "@langchain/core/runnables";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { IndexifyClient, IndexifyRetriever } from "getindexify";
 import { formatDocumentsAsString } from "langchain/util/document";
 
-(async () => {
+jest.setTimeout(30000);
+
+// Set your OPENAI_API_KEY environment variable before running
+
+test("Langchain Rag", async () => {
   // setup client
   const client = await IndexifyClient.createNamespace("testlangchain");
   client.addExtractionPolicy({
@@ -45,8 +50,6 @@ import { formatDocumentsAsString } from "langchain/util/document";
     new StringOutputParser(),
   ]);
 
-  const question = "Where is Lucas From?";
-  console.log(`Question: ${question}`)
-  const result = await chain.invoke(question);
-  console.log(result)
-})();
+  const result = await chain.invoke("Where is Lucas from?");
+  expect(result).toContain("Los Angeles, California");
+});

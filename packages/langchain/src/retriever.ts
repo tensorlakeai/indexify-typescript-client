@@ -4,7 +4,7 @@ import {
 } from "@langchain/core/retrievers";
 import type { CallbackManagerForRetrieverRun } from "@langchain/core/callbacks/manager";
 import { Document } from "@langchain/core/documents";
-import IndexifyClient from "../client";
+import IndexifyClient from "../../../src/client";
 
 export interface IndexifyRetrieverInput extends BaseRetrieverInput {
   client: IndexifyClient;
