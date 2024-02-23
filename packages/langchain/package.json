@@ -1,36 +1,29 @@
 {
-  "name": "getindexify",
-  "version": "0.0.11",
-  "description": "This is the TypeScript client for interacting with the Indexify service.",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "name": "@getindexify/langchain",
+  "version": "0.0.1",
+  "description": "Langchain retriever for indexify client.",
+  "main": "index.ts",
   "scripts": {
-    "test": "jest",
-    "build": "tsup"
+    "build": "tsup",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tensorlakeai/indexify-typescript-client.git"
   },
-  "author": "",
+  "author": "Lucas Jackson <lucas@tensorlake.ai>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/tensorlakeai/indexify-typescript-client/issues"
   },
   "homepage": "https://github.com/tensorlakeai/indexify-typescript-client#readme",
+  "dependencies": {
+    "langchain": "^0.1.21"
+  },
   "devDependencies": {
-    "@types/jest": "^29.5.12",
     "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3"
-  },
-  "dependencies": {
-    "axios": "^1.6.7"
   }
 }
