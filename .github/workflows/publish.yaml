@@ -15,7 +15,7 @@ permissions:
   contents: write
   
 jobs:
-  publish:
+  publish-langchain:
     name: Publish Langchain Retriever to npm
     runs-on: ubuntu-latest
     needs:
@@ -31,7 +31,7 @@ jobs:
           package: packages/langchain
           token: ${{ secrets.NPM_TOKEN }}
 
-  publish:
+  publish-client:
     name: Publish TypeScript Client to npm
     runs-on: ubuntu-latest
     needs:
