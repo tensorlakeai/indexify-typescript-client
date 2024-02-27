@@ -9,6 +9,7 @@ import {
   IContentMetadata,
   IContent,
   IExtractionPolicy,
+  ISearchIndexResponse,
   ITask,
   IDocument,
 } from "./types";
@@ -24,6 +25,7 @@ export {
   IContentMetadata,
   IContent,
   IExtractionPolicy,
+  ISearchIndexResponse,
   ITask,
   IDocument,
 };
