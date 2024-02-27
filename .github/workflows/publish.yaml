@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "20"
-      - run: npm ci
+      - run: cd packages/langchain && npm ci
       - name: Build
         run: cd packages/langchain && npm run build
       - uses: JS-DevTools/npm-publish@v3
