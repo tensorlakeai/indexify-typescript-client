@@ -119,9 +119,24 @@ test("Get content", async () => {
 
   content = await client.getContent(undefined, "source:test");
   expect(content.length).toBe(2);
+  expect(content[0].content_url).toContain("http://")
 
   content = await client.getContent(undefined, "source:nothing");
   expect(content.length).toBe(0);
+});
+
+
+test("Download content", async () => {
+  const client = await IndexifyClient.createNamespace("testgetcontent");
+  await client.addDocuments([
+    { text: "This is a download", labels: { source: "testdownload" } },
+  ]);
+
+  const content = await client.getContent(undefined, "source:testdownload");
+  expect(content.length).toBeGreaterThanOrEqual(1);
+
+  const resData = await client.downloadContent<string>(content[0].id)
+  expect(resData).toBe("This is a download")
 });
 
 test("Get Extraction Policies", async () => {
