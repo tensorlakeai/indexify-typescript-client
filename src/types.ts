@@ -25,20 +25,15 @@ export interface IIndex {
 }
 
 export interface IContentMetadata {
-  content_type: string;
-  created_at: number;
   id: string;
-  labels: Record<string, string>;
-  name: string;
   parent_id?: string;
   namespace: string;
-  source: string;
+  name: string;
+  mime_type: string;
+  labels: Record<string, string>;
   storage_url: string;
-}
-
-export interface IContent {
-  bytes: number[];
-  content_type: string;
+  created_at: number;
+  source: string;
 }
 
 export interface IExtractionPolicy {
