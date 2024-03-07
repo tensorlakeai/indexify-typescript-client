@@ -1,7 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 import Extractor from "./extractor";
 import {
-  IContent,
   IContentMetadata,
   IExtractor,
   IExtractionPolicy,
@@ -16,7 +15,7 @@ import {
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
 
 class IndexifyClient {
-  private serviceUrl: string;
+  public serviceUrl: string;
   private client: AxiosInstance;
   public namespace: string;
   public extractionPolicies: IExtractionPolicy[];
@@ -204,9 +203,9 @@ class IndexifyClient {
     await this.client.post("add_texts", { documents: newDocuments });
   }
 
-  async getContentById(id: string): Promise<IContent> {
+  async getContentById(id: string): Promise<IContentMetadata> {
     const resp = await this.client.get(`content/${id}`);
-    return resp.data.content_list[0];
+    return resp.data.content_metadata;
   }
 
   async getTasks(extraction_policy?: string): Promise<ITask[]> {
