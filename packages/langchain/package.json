@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/tensorlakeai/indexify-typescript-client#readme",
   "dependencies": {
+    "getindexify": "^0.0.16",
     "langchain": "^0.1.21"
   },
   "devDependencies": {
