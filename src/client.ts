@@ -220,9 +220,8 @@ class IndexifyClient {
     return this.baseContentToContentMetadata(resp.data.content_metadata);
   }
 
-
   async downloadContent<T>(id: string): Promise<T> {
-    const url = `${this.serviceUrl}/namespaces/${this.namespace}/content/${id}/download`
+    const url = `${this.serviceUrl}/namespaces/${this.namespace}/content/${id}/download`;
     try {
       const response = await axios.get<T>(url);
       return response.data;

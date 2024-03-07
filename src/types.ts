@@ -36,9 +36,8 @@ export interface IBaseContentMetadata {
   source: string;
 }
 export interface IContentMetadata extends IBaseContentMetadata {
-  content_url: string
+  content_url: string;
 }
-
 
 export interface IExtractionPolicy {
   extractor: string;
