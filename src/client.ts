@@ -10,6 +10,7 @@ import {
   IAddExtractorPolicyResponse,
   IDocument,
   ISearchIndexResponse,
+  IBaseContentMetadata,
 } from "./types";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
@@ -85,6 +86,15 @@ class IndexifyClient {
     }
   }
 
+  private baseContentToContentMetadata = (
+    content: IBaseContentMetadata
+  ): IContentMetadata => {
+    return {
+      ...content,
+      content_url: `${this.serviceUrl}/namespaces/${this.namespace}/content/${content.id}/download`,
+    };
+  };
+
   async get(endpoint: string): Promise<AxiosResponse> {
     return this.request("GET", endpoint);
   }
@@ -144,7 +154,7 @@ class IndexifyClient {
     });
 
     // update this.extractor_bindings
-    await this.getExtractionPolicies()
+    await this.getExtractionPolicies();
 
     return resp.data;
   }
@@ -156,7 +166,9 @@ class IndexifyClient {
     const resp = await this.client.get("content", {
       params: { parent_id, labels_eq },
     });
-    return resp.data.content_list;
+    return resp.data.content_list.map((content: IBaseContentMetadata) => {
+      return this.baseContentToContentMetadata(content);
+    });
   }
 
   async addDocuments(
@@ -205,7 +217,17 @@ class IndexifyClient {
 
   async getContentById(id: string): Promise<IContentMetadata> {
     const resp = await this.client.get(`content/${id}`);
-    return resp.data.content_metadata;
+    return this.baseContentToContentMetadata(resp.data.content_metadata);
+  }
+
+  async downloadContent<T>(id: string): Promise<T> {
+    const url = `${this.serviceUrl}/namespaces/${this.namespace}/content/${id}/download`;
+    try {
+      const response = await axios.get<T>(url);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to download content ${url}: ${error}`);
+    }
   }
 
   async getTasks(extraction_policy?: string): Promise<ITask[]> {
@@ -223,7 +245,7 @@ class IndexifyClient {
     if (typeof window === "undefined") {
       // node
       if (typeof fileInput !== "string") {
-        throw Error("Expected string")
+        throw Error("Expected string");
       }
       const FormData = require("form-data");
       const fs = require("fs");
@@ -237,7 +259,7 @@ class IndexifyClient {
     } else {
       // browser
       if (!isBlob(fileInput)) {
-        throw Error("Expected blob")
+        throw Error("Expected blob");
       }
       const formData = new FormData();
       formData.append("file", fileInput);
@@ -246,10 +268,10 @@ class IndexifyClient {
   }
 
   async getExtractionPolicies(): Promise<IExtractionPolicy[]> {
-    const resp = await this.client.get("")
-    const policies = resp.data.namespace?.extraction_policies ?? []
-    this.extractionPolicies = policies
-    return policies
+    const resp = await this.client.get("");
+    const policies = resp.data.namespace?.extraction_policies ?? [];
+    this.extractionPolicies = policies;
+    return policies;
   }
 }
 

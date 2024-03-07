@@ -24,7 +24,7 @@ export interface IIndex {
   schema: Record<string, string | number>;
 }
 
-export interface IContentMetadata {
+export interface IBaseContentMetadata {
   id: string;
   parent_id?: string;
   namespace: string;
@@ -34,6 +34,9 @@ export interface IContentMetadata {
   storage_url: string;
   created_at: number;
   source: string;
+}
+export interface IContentMetadata extends IBaseContentMetadata {
+  content_url: string;
 }
 
 export interface IExtractionPolicy {
