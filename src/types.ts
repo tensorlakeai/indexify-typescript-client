@@ -45,6 +45,7 @@ export interface IExtractedMetadata {
   metadata: object[];
   extractor_name: string;
 }
+
 export interface IExtractionPolicy {
   extractor: string;
   name: string;
