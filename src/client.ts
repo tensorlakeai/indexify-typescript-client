@@ -11,6 +11,7 @@ import {
   IDocument,
   ISearchIndexResponse,
   IBaseContentMetadata,
+  IExtractedMetadata,
 } from "./types";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
@@ -218,6 +219,11 @@ class IndexifyClient {
   async getContentById(id: string): Promise<IContentMetadata> {
     const resp = await this.client.get(`content/${id}`);
     return this.baseContentToContentMetadata(resp.data.content_metadata);
+  }
+
+  async getExtractedMetadata(id: string): Promise<IExtractedMetadata[]> {
+    const resp = await this.client.get(`content/${id}/metadata`);
+    return resp.data.metadata
   }
 
   async downloadContent<T>(id: string): Promise<T> {

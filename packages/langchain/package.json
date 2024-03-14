@@ -1,6 +1,6 @@
 {
   "name": "@getindexify/langchain",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "Langchain retriever for indexify client.",
   "main": "index.ts",
   "scripts": {
