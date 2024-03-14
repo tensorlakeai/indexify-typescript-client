@@ -39,6 +39,13 @@ export interface IContentMetadata extends IBaseContentMetadata {
   content_url: string;
 }
 
+export interface IExtractedMetadata {
+  id: string;
+  content_id: string;
+  metadata: object[];
+  extractor_name: string;
+}
+
 export interface IExtractionPolicy {
   extractor: string;
   name: string;
