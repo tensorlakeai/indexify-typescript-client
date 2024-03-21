@@ -12,6 +12,7 @@ import {
   ISearchIndexResponse,
   IBaseContentMetadata,
   IExtractedMetadata,
+  ISchema,
 } from "./types";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
@@ -223,7 +224,7 @@ class IndexifyClient {
 
   async getExtractedMetadata(id: string): Promise<IExtractedMetadata[]> {
     const resp = await this.client.get(`content/${id}/metadata`);
-    return resp.data.metadata
+    return resp.data.metadata;
   }
 
   async downloadContent<T>(id: string): Promise<T> {
@@ -241,6 +242,11 @@ class IndexifyClient {
       params: { extraction_policy },
     });
     return resp.data.tasks;
+  }
+
+  async getSchemas(): Promise<ISchema[]> {
+    const resp = await this.client.get("schemas");
+    return resp.data.schemas;
   }
 
   async uploadFile(fileInput: string | Blob): Promise<any> {
