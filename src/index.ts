@@ -12,6 +12,7 @@ import {
   ISearchIndexResponse,
   ITask,
   IDocument,
+  ISchema,
 } from "./types";
 
 export {
@@ -20,6 +21,7 @@ export {
   INamespace,
   IEmbeddingSchema,
   IExtractorSchema,
+  ISchema,
   IExtractor,
   IIndex,
   IContentMetadata,

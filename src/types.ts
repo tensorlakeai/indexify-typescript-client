@@ -19,9 +19,14 @@ export interface IExtractor {
   outputs: IExtractorSchema;
 }
 
+export interface ISchema {
+  columns: Record<string, string | number | boolean>;
+  content_source: string;
+  namespace: string;
+}
 export interface IIndex {
   name: string;
-  schema: Record<string, string | number>;
+  schema: Record<string, string | number | boolean>;
 }
 
 export interface IBaseContentMetadata {
