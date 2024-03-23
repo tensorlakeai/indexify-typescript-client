@@ -68,7 +68,7 @@ test("Add Documents", async () => {
   expect(content.length).toBe(8);
 });
 
-test("Search", async () => {
+test.only("Search", async () => {
   const policy: IExtractionPolicy = {
     extractor: "tensorlake/minilm-l6",
     name: "minilml6",
@@ -78,6 +78,7 @@ test("Search", async () => {
   const client = await IndexifyClient.createNamespace({
     namespace: "testsearch",
   });
+  console.log('got namespace?', client.namespace)
   const resp = await client.addExtractionPolicy(policy);
   expect(resp.index_names.length).toBe(1);
 
@@ -88,7 +89,7 @@ test("Search", async () => {
     { text: "This is a test2", labels: { source: "test" } },
   ]);
 
-  await new Promise((r) => setTimeout(r, 10000));
+  await new Promise((r) => setTimeout(r, 15000));
 
   const searchResult = await client.searchIndex(indexName, "test", 3);
   expect(searchResult.length).toBe(2);

@@ -15,7 +15,9 @@ jest.setTimeout(30000);
 
 test("Langchain Rag", async () => {
   // setup client
-  const client = await IndexifyClient.createNamespace("testlangchain");
+  const client = await IndexifyClient.createNamespace({
+    namespace: "testlangchain",
+  });
   client.addExtractionPolicy({
     extractor: "tensorlake/minilm-l6",
     name: "minilml6",
