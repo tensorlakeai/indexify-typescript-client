@@ -68,7 +68,7 @@ test("Add Documents", async () => {
   expect(content.length).toBe(8);
 });
 
-test.only("Search", async () => {
+test("Search", async () => {
   const policy: IExtractionPolicy = {
     extractor: "tensorlake/minilm-l6",
     name: "minilml6",
