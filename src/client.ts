@@ -101,16 +101,24 @@ class IndexifyClient {
     return this.request("GET", endpoint);
   }
 
-  static async namespaces(): Promise<INamespace[]> {
-    const response = await axios.get(`${DEFAULT_SERVICE_URL}/namespaces`);
+  static async namespaces({
+    serviceUrl = DEFAULT_SERVICE_URL,
+  }: {
+    serviceUrl?: string;
+  } = {}): Promise<INamespace[]> {
+    const response = await axios.get(`${serviceUrl}/namespaces`);
     return response.data.namespaces;
   }
 
-  static async createNamespace(
-    namespace: string,
-    extraction_policies?: IExtractionPolicy[],
-    labels?: Record<string, string>
-  ) {
+  static async createNamespace({
+    namespace,
+    extraction_policies,
+    labels,
+  }: {
+    namespace: string;
+    extraction_policies?: IExtractionPolicy[];
+    labels?: Record<string, string>;
+  }) {
     await axios.post(`${DEFAULT_SERVICE_URL}/namespaces`, {
       name: namespace,
       extraction_policies: extraction_policies ?? [],
@@ -126,7 +134,7 @@ class IndexifyClient {
   }
 
   async extractors(): Promise<Extractor[]> {
-    const response = await axios.get(`${DEFAULT_SERVICE_URL}/extractors`);
+    const response = await axios.get(`${this.serviceUrl}/extractors`);
     const extractorsData = response.data.extractors as IExtractor[];
     return extractorsData.map((data) => new Extractor(data));
   }
