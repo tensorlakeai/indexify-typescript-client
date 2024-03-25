@@ -39,6 +39,7 @@ export interface IBaseContentMetadata {
   storage_url: string;
   created_at: number;
   source: string;
+  size: number;
 }
 export interface IContentMetadata extends IBaseContentMetadata {
   content_url: string;
