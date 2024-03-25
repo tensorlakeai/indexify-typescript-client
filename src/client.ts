@@ -87,13 +87,23 @@ class IndexifyClient {
       throw error;
     }
   }
-
+  
   private baseContentToContentMetadata = (
     content: IBaseContentMetadata
   ): IContentMetadata => {
+    let content_url: string;
+    
+    if (content.storage_url.startsWith("http")) {
+      // if content is ingested with remote url use storage url
+      content_url = content.storage_url;
+    } else {
+      // use streaming api for content url
+      content_url = `${this.serviceUrl}/namespaces/${this.namespace}/content/${content.id}/download`;
+    }
+
     return {
       ...content,
-      content_url: `${this.serviceUrl}/namespaces/${this.namespace}/content/${content.id}/download`,
+      content_url,
     };
   };
 
