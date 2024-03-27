@@ -49,6 +49,7 @@ class IndexifyClient {
       namespace,
       response.data.namespace.extraction_policies.map(
         (item: {
+          id: string;
           name: string;
           extractor: string;
           filters_eq: string;
@@ -57,6 +58,7 @@ class IndexifyClient {
         }) => {
           // abstraction for filters_eq
           return {
+            id: item.id,
             name: item.name,
             extractor: item.extractor,
             labels_eq: item.filters_eq,
