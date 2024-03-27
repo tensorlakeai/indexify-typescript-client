@@ -41,6 +41,7 @@ export interface IBaseContentMetadata {
   source: string;
   size: number;
 }
+
 export interface IContentMetadata extends IBaseContentMetadata {
   content_url: string;
 }
@@ -53,6 +54,7 @@ export interface IExtractedMetadata {
 }
 
 export interface IExtractionPolicy {
+  id?: string
   extractor: string;
   name: string;
   labels_eq?: string;
@@ -64,6 +66,7 @@ export interface ITask {
   content_metadata: IContentMetadata;
   extractor: string;
   extraction_policy: string;
+  extraction_policy_id: string;
   id: string;
   input_params: Record<string, string>;
   outcome: string;
