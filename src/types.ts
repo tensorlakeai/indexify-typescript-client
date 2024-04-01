@@ -14,6 +14,7 @@ export interface IExtractorSchema {
 
 export interface IExtractor {
   name: string;
+  input_mime_types: string[];
   description: string;
   input_params: { [key: string]: any };
   outputs: IExtractorSchema;
