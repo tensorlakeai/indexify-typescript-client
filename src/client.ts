@@ -13,7 +13,9 @@ import {
   IBaseContentMetadata,
   IExtractedMetadata,
   ISchema,
+  IMtlsConfig,
 } from "./types";
+import { Agent } from "https";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
 
@@ -26,24 +28,33 @@ class IndexifyClient {
   constructor(
     serviceUrl: string = DEFAULT_SERVICE_URL,
     namespace: string = "default",
-    extractionPolicies: IExtractionPolicy[]
+    // optional mtls config
+    extractionPolicies: IExtractionPolicy[],
+    httpsAgent?: Agent
   ) {
     this.serviceUrl = serviceUrl;
     this.namespace = namespace;
     this.extractionPolicies = extractionPolicies;
+
     this.client = axios.create({
       baseURL: `${serviceUrl}/namespaces/${namespace}`,
+      httpsAgent,
     });
   }
 
   static async createClient({
     serviceUrl = DEFAULT_SERVICE_URL,
     namespace = "default",
+    mtlsConfig,
   }: {
     serviceUrl?: string;
     namespace?: string;
+    mtlsConfig?: IMtlsConfig;
   } = {}): Promise<IndexifyClient> {
-    const response = await axios.get(`${serviceUrl}/namespaces/${namespace}`);
+    const response = await axios.get(`${serviceUrl}/namespaces/${namespace}`, {
+      httpsAgent: IndexifyClient.getHttpsAgent({ mtlsConfig }),
+    });
+
     return new IndexifyClient(
       serviceUrl,
       namespace,
@@ -66,7 +77,8 @@ class IndexifyClient {
             content_source: item.content_source,
           };
         }
-      ) as IExtractionPolicy[]
+      ) as IExtractionPolicy[],
+      IndexifyClient.getHttpsAgent({ mtlsConfig })
     );
   }
 
@@ -89,12 +101,12 @@ class IndexifyClient {
       throw error;
     }
   }
-  
+
   private baseContentToContentMetadata = (
     content: IBaseContentMetadata
   ): IContentMetadata => {
     let content_url: string;
-    
+
     if (content.storage_url.startsWith("http")) {
       // if content is ingested with remote url use storage url
       content_url = content.storage_url;
@@ -109,16 +121,44 @@ class IndexifyClient {
     };
   };
 
+  static getHttpsAgent({
+    mtlsConfig,
+  }: {
+    mtlsConfig?: IMtlsConfig;
+  }): Agent | undefined {
+    let httpsAgent = undefined;
+    if (mtlsConfig !== undefined) {
+      if (typeof window !== "undefined") {
+        throw new Error(
+          "mTLS support is not available in browser environments."
+        );
+      }
+      const fs = require("fs");
+      httpsAgent = new Agent({
+        cert: fs.readFileSync(mtlsConfig.certPath),
+        key: fs.readFileSync(mtlsConfig.keyPath),
+        ...(mtlsConfig.caPath && { ca: fs.readFileSync(mtlsConfig.caPath) }),
+        rejectUnauthorized: true,
+      });
+    }
+
+    return httpsAgent;
+  }
+
   async get(endpoint: string): Promise<AxiosResponse> {
     return this.request("GET", endpoint);
   }
 
   static async namespaces({
     serviceUrl = DEFAULT_SERVICE_URL,
+    mtlsConfig,
   }: {
     serviceUrl?: string;
+    mtlsConfig?: IMtlsConfig;
   } = {}): Promise<INamespace[]> {
-    const response = await axios.get(`${serviceUrl}/namespaces`);
+    const response = await axios.get(`${serviceUrl}/namespaces`, {
+      httpsAgent: IndexifyClient.getHttpsAgent({ mtlsConfig }),
+    });
     return response.data.namespaces;
   }
 
@@ -126,16 +166,22 @@ class IndexifyClient {
     namespace,
     extraction_policies,
     labels,
+    mtlsConfig,
   }: {
     namespace: string;
     extraction_policies?: IExtractionPolicy[];
     labels?: Record<string, string>;
+    mtlsConfig?: IMtlsConfig;
   }) {
-    await axios.post(`${DEFAULT_SERVICE_URL}/namespaces`, {
-      name: namespace,
-      extraction_policies: extraction_policies ?? [],
-      labels: labels ?? {},
-    });
+    await axios.post(
+      `${DEFAULT_SERVICE_URL}/namespaces`,
+      {
+        name: namespace,
+        extraction_policies: extraction_policies ?? [],
+        labels: labels ?? {},
+      },
+      { httpsAgent: IndexifyClient.getHttpsAgent({ mtlsConfig }) }
+    );
     const client = await IndexifyClient.createClient({ namespace });
     return client;
   }
@@ -146,7 +192,7 @@ class IndexifyClient {
   }
 
   async extractors(): Promise<Extractor[]> {
-    const response = await axios.get(`${this.serviceUrl}/extractors`);
+    const response = await this.client.get(`${this.serviceUrl}/extractors`);
     const extractorsData = response.data.extractors as IExtractor[];
     return extractorsData.map((data) => new Extractor(data));
   }
@@ -248,12 +294,11 @@ class IndexifyClient {
   }
 
   async downloadContent<T>(id: string): Promise<T> {
-    const url = `${this.serviceUrl}/namespaces/${this.namespace}/content/${id}/download`;
     try {
-      const response = await axios.get<T>(url);
+      const response = await this.client.get(`content/${id}/download`);
       return response.data;
     } catch (error) {
-      throw new Error(`Failed to download content ${url}: ${error}`);
+      throw new Error(`Failed to download content ${id}: ${error}`);
     }
   }
 

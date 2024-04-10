@@ -55,7 +55,7 @@ export interface IExtractedMetadata {
 }
 
 export interface IExtractionPolicy {
-  id?: string
+  id?: string;
   extractor: string;
   name: string;
   labels_eq?: string;
@@ -91,4 +91,10 @@ export interface ISearchIndexResponse {
 
 export interface IAddExtractorPolicyResponse {
   index_names: string[];
+}
+
+export interface IMtlsConfig {
+  certPath: string;
+  keyPath: string;
+  caPath?: string; // Optional, only if using a custom CA
 }
