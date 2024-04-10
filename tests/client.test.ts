@@ -78,7 +78,7 @@ test("Search", async () => {
   const client = await IndexifyClient.createNamespace({
     namespace: "testsearch",
   });
-  console.log('got namespace?', client.namespace)
+
   const resp = await client.addExtractionPolicy(policy);
   expect(resp.index_names.length).toBe(1);
 
@@ -162,3 +162,18 @@ test("Get Extraction Policies", async () => {
   const policies = await client.getExtractionPolicies();
   expect(policies.length).toBe(1);
 });
+
+// test.only("MTLS", async () => {
+//   const fs = require("fs")
+//   const https = require("https")
+//   const axios = require("axios")
+
+//   const client = await IndexifyClient.createClient({
+//     serviceUrl: "mtls url",
+//     mtlsConfig:{
+//       certPath: "tests/certs/client.crt",
+//       keyPath: "tests/certs/client.key"
+//     }
+//   })
+//   const content = await client.getContent()
+// });
