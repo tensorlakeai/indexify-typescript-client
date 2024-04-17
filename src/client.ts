@@ -350,6 +350,19 @@ class IndexifyClient {
     this.extractionPolicies = policies;
     return policies;
   }
+
+  async ingestRemoteFile(
+    url: string,
+    mime_type: string,
+    labels: Record<string, string>
+  ): Promise<AxiosResponse> {
+    const resp = await this.client.post("ingest_remote_file", {
+      url,
+      mime_type,
+      labels,
+    });
+    return resp
+  }
 }
 
 export default IndexifyClient;
