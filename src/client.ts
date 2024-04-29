@@ -360,12 +360,14 @@ class IndexifyClient {
   async ingestRemoteFile(
     url: string,
     mime_type: string,
-    labels: Record<string, string>
+    labels: Record<string, string>,
+    id?: string
   ): Promise<AxiosResponse> {
     const resp = await this.client.post("ingest_remote_file", {
       url,
       mime_type,
       labels,
+      id,
     });
     return resp;
   }
