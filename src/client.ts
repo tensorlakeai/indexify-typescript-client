@@ -284,14 +284,9 @@ class IndexifyClient {
     await this.client.post("add_texts", { documents: newDocuments });
   }
 
-  async getContentById(id: string): Promise<IContentMetadata> {
-    const resp = await this.client.get(`content/${id}`);
-    return this.baseContentToContentMetadata(resp.data.content_metadata);
-  }
-
   async getContentMetadata(id: string): Promise<IContentMetadata> {
     const resp = await this.client.get(`content/${id}`);
-    return resp.data.metadata;
+    return this.baseContentToContentMetadata(resp.data.metadata);
   }
 
   async getContentTree(id: string): Promise<IContentMetadata[]> {
