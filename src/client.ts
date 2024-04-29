@@ -289,8 +289,8 @@ class IndexifyClient {
     return this.baseContentToContentMetadata(resp.data.content_metadata);
   }
 
-  async getExtractedMetadata(id: string): Promise<IContentMetadata> {
-    const resp = await this.client.get(`content/${id}/metadata`);
+  async getContentMetadata(id: string): Promise<IContentMetadata> {
+    const resp = await this.client.get(`content/${id}`);
     return resp.data.metadata;
   }
 
