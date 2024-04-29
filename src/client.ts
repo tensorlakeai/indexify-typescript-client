@@ -11,11 +11,12 @@ import {
   IDocument,
   ISearchIndexResponse,
   IBaseContentMetadata,
-  IExtractedMetadata,
   ISchema,
   IMtlsConfig,
 } from "./types";
 import { Agent } from "https";
+import { randomUUID } from "crypto";
+import { createHash } from "crypto";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
 
@@ -366,7 +367,17 @@ class IndexifyClient {
       mime_type,
       labels,
     });
-    return resp
+    return resp;
+  }
+
+  generateUniqueHexId(): string {
+    return randomUUID().replace(/-/g, "").substring(0, 16);
+  }
+
+  generateHashFromString(inputString: string): string {
+    const hashObject = createHash("sha256");
+    hashObject.update(inputString);
+    return hashObject.digest("hex").substring(0, 16);
   }
 }
 
