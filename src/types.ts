@@ -80,6 +80,7 @@ export interface ITask {
 export interface IDocument {
   text: string;
   labels: Record<string, string>;
+  id?: string;
 }
 
 export interface ISearchIndexResponse {

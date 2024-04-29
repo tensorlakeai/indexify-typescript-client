@@ -163,6 +163,16 @@ test("Get Extraction Policies", async () => {
   expect(policies.length).toBe(1);
 });
 
+test("Ingest remote url", async () => {
+  const client = await IndexifyClient.createClient();
+  await client.ingestRemoteFile(
+    "https://gif-search.diptanu-6d5.workers.dev/OlG-5EjOENZLvlxHcXXmT.gif",
+    "image/gif",
+    {},
+    "5EjOENZLvlxHcXXmT"
+  );
+});
+
 // test.only("MTLS", async () => {
 //   const fs = require("fs")
 //   const https = require("https")
