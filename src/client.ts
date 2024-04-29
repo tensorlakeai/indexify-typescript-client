@@ -286,7 +286,7 @@ class IndexifyClient {
 
   async getContentMetadata(id: string): Promise<IContentMetadata> {
     const resp = await this.client.get(`content/${id}`);
-    return this.baseContentToContentMetadata(resp.data.metadata);
+    return this.baseContentToContentMetadata(resp.data.content_metadata);
   }
 
   async getContentTree(id: string): Promise<IContentMetadata[]> {
