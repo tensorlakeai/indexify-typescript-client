@@ -4,5 +4,5 @@ This package contains the indexify langchain retriever so that you can build lan
 
 ### Install
 ```bash
-npm install @getindexify/retriever
+npm install @getindexify/langchain
 ```
