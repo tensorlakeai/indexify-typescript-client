@@ -203,12 +203,14 @@ class IndexifyClient {
   async searchIndex(
     name: string,
     query: string,
-    topK: number
+    topK: number,
+    include_content:boolean = true
   ): Promise<ISearchIndexResponse[]> {
     const resp = await this.client.post("search", {
       index: name,
       query,
       k: topK,
+      include_content
     });
     return resp.data["results"];
   }
