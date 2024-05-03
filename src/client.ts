@@ -13,6 +13,8 @@ import {
   IBaseContentMetadata,
   ISchema,
   IMtlsConfig,
+  IContent,
+  IExtractResponse,
 } from "./types";
 import { Agent } from "https";
 import { randomUUID } from "crypto";
@@ -350,6 +352,31 @@ class IndexifyClient {
     const policies = resp.data.namespace?.extraction_policies ?? [];
     this.extractionPolicies = policies;
     return policies;
+  }
+
+  async extract({
+    name,
+    input_params,
+    content: { content_type, bytes, features = [], labels = {} },
+  }: {
+    name: string;
+    input_params?: Record<string, string | number>;
+    content: IContent;
+  }): Promise<IExtractResponse> {
+    const resp = await this.client.post(
+      `${DEFAULT_SERVICE_URL}/extractors/extract`,
+      {
+        name,
+        content: {
+          content_type,
+          bytes,
+          features,
+          labels,
+        },
+        input_params: JSON.stringify(input_params),
+      }
+    );
+    return resp.data;
   }
 
   async ingestRemoteFile(

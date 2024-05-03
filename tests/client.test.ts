@@ -1,5 +1,7 @@
 import { IndexifyClient } from "../src";
 import { IExtractionPolicy } from "../src/types";
+import { isAxiosError } from "axios";
+const fs = require("fs");
 
 jest.setTimeout(30000);
 
@@ -171,6 +173,37 @@ test("Ingest remote url", async () => {
     {},
     "5EjOENZLvlxHcXXmT"
   );
+});
+
+test.only("Test Extract Method", async () => {
+  // Test minilm feature extract
+  const client = await IndexifyClient.createClient();
+  const res = await client.extract({
+    name: "tensorlake/minilm-l6",
+    content: { bytes: "testing", content_type: "text/plain" },
+  });
+
+  expect(res.content.length).toBe(0);
+  expect(res.features.length).toBe(1);
+
+  // Test wiki content extraction
+  const html = fs.readFileSync(__dirname + "/files/steph_curry.html", "utf8");
+  const res2 = await client.extract({
+    name: "tensorlake/wikipedia",
+    content: { bytes: html, content_type: "text/plain" },
+  });
+  expect(res2.content.length).toBe(29);
+
+  // Test eighth piece of content
+  const content = res2.content[8];
+  expect(String.fromCharCode(...content.bytes)).toBe(
+    "NCAA  Davidson College  NBA  Golden State Warriors"
+  );
+  expect(content.features?.length).toBe(1);
+  expect(content.features?.[0].feature_type).toBe("metadata");
+  expect(content.content_type).toBe("text/plain");
+  expect(content.features?.[0].data.headline).toBe("Records");
+  expect(content.features?.[0].data.title).toBe("Stephen Curry");
 });
 
 // test.only("MTLS", async () => {

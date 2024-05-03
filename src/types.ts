@@ -42,7 +42,6 @@ export interface IBaseContentMetadata {
   source: string;
   size: number;
 }
-
 export interface IContentMetadata extends IBaseContentMetadata {
   content_url: string;
 }
@@ -83,6 +82,31 @@ export interface IDocument {
   id?: string;
 }
 
+export interface IFeature {
+  feature_type: "embedding" | "metadata" | "unknown";
+  name: string;
+  data: { [key: string]: any };
+}
+
+export interface IContent {
+  content_type: string;
+  bytes: string | number[];
+  features?: IFeature[];
+  labels?: Record<string, string>;
+}
+
+export interface IContentResp {
+  content_type: string;
+  bytes: number[];
+  features?: IFeature[];
+  labels?: Record<string, string>;
+}
+
+export interface IExtractResponse {
+  features: IFeature[]
+  content: IContentResp[]
+}
+
 export interface ISearchIndexResponse {
   content_id: string;
   text: string;
@@ -99,3 +123,4 @@ export interface IMtlsConfig {
   keyPath: string;
   caPath?: string; // Optional, only if using a custom CA
 }
+

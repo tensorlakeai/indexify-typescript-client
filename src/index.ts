@@ -13,6 +13,7 @@ import {
   ITask,
   IDocument,
   ISchema,
+  IContent
 } from "./types";
 
 export {
@@ -30,4 +31,5 @@ export {
   ISearchIndexResponse,
   ITask,
   IDocument,
+  IContent
 };
