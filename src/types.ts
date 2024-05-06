@@ -32,7 +32,8 @@ export interface IIndex {
 
 export interface IBaseContentMetadata {
   id: string;
-  parent_id?: string;
+  parent_id: string;
+  root_content_id: string;
   namespace: string;
   name: string;
   mime_type: string;
@@ -41,7 +42,9 @@ export interface IBaseContentMetadata {
   created_at: number;
   source: string;
   size: number;
+  hash: string;
 }
+
 export interface IContentMetadata extends IBaseContentMetadata {
   content_url: string;
 }
@@ -62,18 +65,33 @@ export interface IExtractionPolicy {
   content_source?: string;
 }
 
-export interface ITask {
-  content_metadata: IContentMetadata;
-  extractor: string;
-  extraction_policy: string;
-  extraction_policy_id: string;
+export interface ITaskContentMetadata {
   id: string;
-  input_params: Record<string, string>;
+  parent_id: string;
+  root_content_id: string;
+  namespace: string;
+  name: string;
+  content_type: string;
+  labels: Record<string, string>;
+  storage_url: string;
+  created_at: number;
+  source: string;
+  size_bytes: number;
+  tombstoned: boolean;
+  hash: string;
+  extraction_policy_ids: Record<string, number>;
+}
+
+export interface ITask {
+  id: string;
+  extractor: string;
+  extraction_policy_id: string;
+  output_index_table_mapping: Record<string, string>;
+  namespace: string;
+  content_metadata: ITaskContentMetadata;
+  input_params: { [key: string]: any };
   outcome: string;
-  output_index_table_mapping: {
-    embedding: string;
-  };
-  repository: string;
+  index_tables: string[];
 }
 
 export interface IDocument {
@@ -103,15 +121,16 @@ export interface IContentResp {
 }
 
 export interface IExtractResponse {
-  features: IFeature[]
-  content: IContentResp[]
+  features: IFeature[];
+  content: IContentResp[];
 }
-
 export interface ISearchIndexResponse {
   content_id: string;
   text: string;
   confidence_score: number;
   labels: Record<string, string>;
+  content_metadata: IContentMetadata;
+  root_content_metadata?: IContentMetadata;
 }
 
 export interface IAddExtractorPolicyResponse {
@@ -123,4 +142,3 @@ export interface IMtlsConfig {
   keyPath: string;
   caPath?: string; // Optional, only if using a custom CA
 }
-
