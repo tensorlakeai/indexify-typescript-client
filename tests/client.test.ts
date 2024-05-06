@@ -1,9 +1,21 @@
 import { IndexifyClient } from "../src";
 import { IExtractionPolicy } from "../src/types";
 import { isAxiosError } from "axios";
+
 const fs = require("fs");
 
 jest.setTimeout(30000);
+
+function generateNanoId(length: number = 21): string {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    result += characters[randomIndex];
+  }
+  return result;
+}
 
 test("Create Client", async () => {
   const client = await IndexifyClient.createClient();
@@ -11,22 +23,31 @@ test("Create Client", async () => {
 });
 
 test("Create Namespace", async () => {
+  const nanoid = generateNanoId(8);
+  const namespaceName = `testnamespace.${nanoid}`;
   const client = await IndexifyClient.createNamespace({
-    namespace: "testnamespace",
+    namespace: namespaceName,
     extraction_policies: [
       {
+        id: nanoid,
         extractor: "tensorlake/minilm-l6",
-        name: "testpolicy",
+        name: `testpolicy`,
       },
     ],
+  }).catch((e) => {
+    if (isAxiosError(e)) {
+      console.log(e.response?.data);
+    }
+    console.log("error creating namespace");
+    throw e;
   });
 
-  expect(client.namespace).toBe("testnamespace");
+  expect(client.namespace).toBe(namespaceName);
   // test get namespaces
   const namespaces = await IndexifyClient.namespaces();
-  expect(
-    namespaces.filter((item) => item.name === "testnamespace").length
-  ).toBe(1);
+  expect(namespaces.filter((item) => item.name === namespaceName).length).toBe(
+    1
+  );
 });
 
 test("Get Extractors", async () => {
@@ -36,8 +57,9 @@ test("Get Extractors", async () => {
 });
 
 test("Add Documents", async () => {
+  const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
-    namespace: "test.adddocuments",
+    namespace: `test.adddocuments.${nanoid}`,
   });
 
   // add single documents
@@ -71,14 +93,16 @@ test("Add Documents", async () => {
 });
 
 test("Search", async () => {
+  const nanoid = generateNanoId(8);
+
   const policy: IExtractionPolicy = {
     extractor: "tensorlake/minilm-l6",
-    name: "minilml6",
+    name: `minilml6.${nanoid}`,
     labels_eq: "source:test",
   };
 
   const client = await IndexifyClient.createNamespace({
-    namespace: "testsearch",
+    namespace: `testsearch.${nanoid}`,
   });
 
   const resp = await client.addExtractionPolicy(policy);
@@ -91,9 +115,10 @@ test("Search", async () => {
     { text: "This is a test2", labels: { source: "test" } },
   ]);
 
-  await new Promise((r) => setTimeout(r, 15000));
+  await new Promise((r) => setTimeout(r, 10000));
 
   const searchResult = await client.searchIndex(indexName, "test", 3);
+  console.log(searchResult);
   expect(searchResult.length).toBe(2);
 });
 
@@ -114,8 +139,9 @@ test("Upload file", async () => {
 });
 
 test("Get content", async () => {
+  const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
-    namespace: "testgetcontent",
+    namespace: `testgetcontent.${nanoid}`,
   });
   await client.addDocuments([
     { text: "This is a test1", labels: { source: "test" } },
@@ -136,8 +162,9 @@ test("Get content", async () => {
 });
 
 test("Download content", async () => {
+  const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
-    namespace: "testgetcontent",
+    namespace: `testgetcontent.${nanoid}`,
   });
   await client.addDocuments([
     { text: "This is a download", labels: { source: "testdownload" } },
@@ -175,7 +202,7 @@ test("Ingest remote url", async () => {
   );
 });
 
-test.only("Test Extract Method", async () => {
+test("Test Extract Method", async () => {
   // Test minilm feature extract
   const client = await IndexifyClient.createClient();
   const res = await client.extract({
