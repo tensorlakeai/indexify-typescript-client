@@ -16,9 +16,8 @@ import {
   IContent,
   IExtractResponse,
 } from "./types";
-import { Agent } from "https";
-import { randomUUID } from "crypto";
-import { createHash } from "crypto";
+import { v4 as uuidv4 } from "uuid";
+import CryptoJS from "crypto-js";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
 
@@ -33,7 +32,7 @@ class IndexifyClient {
     namespace: string = "default",
     // optional mtls config
     extractionPolicies: IExtractionPolicy[],
-    httpsAgent?: Agent
+    httpsAgent?: any
   ) {
     this.serviceUrl = serviceUrl;
     this.namespace = namespace;
@@ -128,7 +127,7 @@ class IndexifyClient {
     mtlsConfig,
   }: {
     mtlsConfig?: IMtlsConfig;
-  }): Agent | undefined {
+  }): any | undefined {
     let httpsAgent = undefined;
     if (mtlsConfig !== undefined) {
       if (typeof window !== "undefined") {
@@ -137,6 +136,7 @@ class IndexifyClient {
         );
       }
       const fs = require("fs");
+      const { Agent } = require("https");
       httpsAgent = new Agent({
         cert: fs.readFileSync(mtlsConfig.certPath),
         key: fs.readFileSync(mtlsConfig.keyPath),
@@ -204,13 +204,13 @@ class IndexifyClient {
     name: string,
     query: string,
     topK: number,
-    include_content:boolean = true
+    include_content: boolean = true
   ): Promise<ISearchIndexResponse[]> {
     const resp = await this.client.post("search", {
       index: name,
       query,
       k: topK,
-      include_content
+      include_content,
     });
     return resp.data["results"];
   }
@@ -397,13 +397,12 @@ class IndexifyClient {
   }
 
   generateUniqueHexId(): string {
-    return randomUUID().replace(/-/g, "").substring(0, 16);
+    return uuidv4().replace(/-/g, "").substring(0, 16);
   }
 
   generateHashFromString(inputString: string): string {
-    const hashObject = createHash("sha256");
-    hashObject.update(inputString);
-    return hashObject.digest("hex").substring(0, 16);
+    const hash = CryptoJS.SHA256(inputString);
+    return hash.toString(CryptoJS.enc.Hex).substring(0, 16);
   }
 }
 
