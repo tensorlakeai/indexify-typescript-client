@@ -233,6 +233,16 @@ test("Test Extract Method", async () => {
   expect(content.features?.[0].data.title).toBe("Stephen Curry");
 });
 
+test("Test generateHashFromString", async () => {
+  const client = await IndexifyClient.createClient();
+  expect(client.generateHashFromString("test")).toBe("9f86d081884c7d65");
+});
+
+test("Test generateUniqueHexId", async () => {
+  const client = await IndexifyClient.createClient();
+  expect(client.generateUniqueHexId()).toHaveLength(16);
+});
+
 // test.only("MTLS", async () => {
 //   const fs = require("fs")
 //   const https = require("https")
