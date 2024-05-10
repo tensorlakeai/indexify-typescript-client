@@ -26,13 +26,11 @@ async function setupExtractionGraph(
   const extractionPolicy: IExtractionPolicy = {
     extractor,
     name: `extractor.${nanoid}`,
-    labels_eq: "source:test",
   };
   const resp = await client.createExtractionGraph(
     extractionGraphName,
     extractionPolicy
   );
-
   expect(resp.indexes.length).toBe(1);
   return resp.indexes;
 }
@@ -153,8 +151,9 @@ test("Search", async () => {
 });
 
 test("Upload file", async () => {
+  const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
-    name: "testuploadfile",
+    name: `testuploadfile.${nanoid}`,
   });
   const extractionGraphName = "extractiongraph";
   await setupExtractionGraph(
@@ -162,8 +161,9 @@ test("Upload file", async () => {
     extractionGraphName,
     "tensorlake/minilm-l6"
   );
+
   await client
-    .uploadFile(`${__dirname}/files/test.txt`, extractionGraphName)
+    .uploadFile(extractionGraphName, `${__dirname}/files/test.txt`)
     .catch((e) => {
       if (isAxiosError(e)) {
         console.log(e.response?.data);
@@ -172,7 +172,7 @@ test("Upload file", async () => {
     });
 });
 
-test.only("Get extracted content", async () => {
+test("Get extracted content", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testgetcontent.${nanoid}`,
@@ -192,18 +192,18 @@ test.only("Get extracted content", async () => {
 
   let content;
 
-  content = await client.getExtractedContent({parent_id:"idontexist"});
+  content = await client.getExtractedContent({ parent_id: "idontexist" });
   expect(content.length).toBe(0);
 
-  content = await client.getExtractedContent({labels_eq:"source:test"});
+  content = await client.getExtractedContent({ labels_eq: "source:test" });
   expect(content.length).toBe(2);
   expect(content[0].content_url).toContain("http://");
 
-  content = await client.getExtractedContent({labels_eq: "source:nothing"});
+  content = await client.getExtractedContent({ labels_eq: "source:nothing" });
   expect(content.length).toBe(0);
 });
 
-test("Test getExtractedMetadata", async () => {
+test("Test getStructuredMetadata", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testgetextractedmetadata.${nanoid}`,
@@ -216,11 +216,17 @@ test("Test getExtractedMetadata", async () => {
     "tensorlake/minilm-l6"
   );
 
-  await client.addDocuments("test", extractionGraphName);
+  await client.addDocuments(extractionGraphName, "test");
 
+  await new Promise((r) => setTimeout(r, 5));
   const content = await client.getExtractedContent();
-  const extractedMetadata = await client.getExtractedMetadata(content[0].id);
-  console.log("extractedMetadata", extractedMetadata);
+  const extractedMetadata = await client.getStructuredMetadata(content[0].id);
+  expect(extractedMetadata.length).toBeGreaterThanOrEqual(1);
+});
+
+test("Get schemas", async () => {
+  const client = await IndexifyClient.createClient();
+  await client.getSchemas();
 });
 
 test("Download content", async () => {
@@ -240,7 +246,9 @@ test("Download content", async () => {
     { text: "This is a download", labels: { source: "testdownload" } },
   ]);
 
-  const content = await client.getExtractedContent({labels_eq:"source:testdownload"});
+  const content = await client.getExtractedContent({
+    labels_eq: "source:testdownload",
+  });
   expect(content.length).toBeGreaterThanOrEqual(1);
 
   const resData = await client.downloadContent<string>(content[0].id);

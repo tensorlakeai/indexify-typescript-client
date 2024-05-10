@@ -52,15 +52,15 @@ export interface IContentMetadata extends IBaseContentMetadata {
 export interface IExtractedMetadata {
   id: string;
   content_id: string;
-  metadata: object[];
+  metadata: { [key: string]: any };
   extractor_name: string;
 }
 
 export interface IExtractionGraph {
-  id:string,
-  name:string,
-  namespace:string,
-  extraction_policies:IExtractionPolicy[]
+  id: string;
+  name: string;
+  namespace: string;
+  extraction_policies: IExtractionPolicy[];
 }
 
 export interface IExtractionPolicy {

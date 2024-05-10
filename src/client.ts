@@ -310,7 +310,7 @@ class IndexifyClient {
     return this.baseContentToContentMetadata(resp.data.content_metadata);
   }
 
-  async getExtractedMetadata(id: string): Promise<IExtractedMetadata> {
+  async getStructuredMetadata(id: string): Promise<IExtractedMetadata[]> {
     const resp = await this.client.get(`content/${id}/metadata`);
     return resp.data.metadata;
   }
@@ -342,46 +342,68 @@ class IndexifyClient {
   }
 
   async uploadFile(
+    extractionGraphNames: string | string[],
     fileInput: string | Blob,
-    extractionGraphNames: string | string[]
+    labels: Record<string, any> = {},
+    id?: string
   ): Promise<any> {
     function isBlob(input: any): input is Blob {
       return input instanceof Blob;
     }
+
     const extractionGraphNamesArray = Array.isArray(extractionGraphNames)
       ? extractionGraphNames
       : [extractionGraphNames];
+
+    const params = new URLSearchParams({
+      extraction_graph_names: extractionGraphNamesArray.join(","),
+      ...(id ? { id: id } : {}),
+    });
 
     if (typeof window === "undefined") {
       // node
       if (typeof fileInput !== "string") {
         throw Error("Expected string");
       }
-      const FormData = require("form-data");
+
       const fs = require("fs");
+
+      // Create form
+      const FormData = require("form-data");
       const formData = new FormData();
-      formData.append("file", fs.createReadStream(fileInput as string));
-      extractionGraphNamesArray.forEach((graphName) => {
-        console.log("adding extraction_graph_name", graphName);
-        formData.append("extraction_graph_names[]", graphName);
+      formData.append("file", fs.createReadStream(fileInput as string)); //stream
+
+      // Append labels to the form data
+      Object.keys(labels).forEach((key) => {
+        formData.append(key, labels[key]);
       });
+      
+      // Upload File
       await this.client.post("upload_file", formData, {
         headers: {
           ...formData.getHeaders(),
         },
+        params,
       });
     } else {
-      console.log("is browser");
       // browser
       if (!isBlob(fileInput)) {
         throw Error("Expected blob");
       }
+
+      // Create form
       const formData = new FormData();
-      formData.append("file", fileInput);
-      extractionGraphNamesArray.forEach((graphName) => {
-        formData.append("extraction_graph_names[]", graphName);
+      formData.append("file", fileInput); //blob
+
+      // Append labels to the form data
+      Object.keys(labels).forEach((key) => {
+        formData.append(key, labels[key]);
       });
-      await this.client.post("/upload_file", formData);
+
+      // Upload File
+      await this.client.post("/upload_file", formData, {
+        params
+      });
     }
   }
 
