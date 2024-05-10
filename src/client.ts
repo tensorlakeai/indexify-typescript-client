@@ -16,6 +16,7 @@ import {
   IContent,
   IExtractResponse,
   IExtractionPolicy,
+  IExtractedMetadata,
 } from "./types";
 import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
@@ -302,6 +303,11 @@ class IndexifyClient {
   async getContentMetadata(id: string): Promise<IContentMetadata> {
     const resp = await this.client.get(`content/${id}`);
     return this.baseContentToContentMetadata(resp.data.content_metadata);
+  }
+
+  async getExtractedMetadata(id: string): Promise<IExtractedMetadata> {
+    const resp = await this.client.get(`content/${id}/metadata`);
+    return resp.data.metadata;
   }
 
   async getContentTree(id: string): Promise<IContentMetadata[]> {
