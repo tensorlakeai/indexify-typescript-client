@@ -1,5 +1,5 @@
 import { IndexifyClient } from "../src";
-import { IExtractionPolicy } from "../src/types";
+import { IExtractionGraph, IExtractionPolicy } from "../src/types";
 import { isAxiosError } from "axios";
 
 const fs = require("fs");
@@ -17,6 +17,26 @@ function generateNanoId(length: number = 21): string {
   return result;
 }
 
+async function setupExtractionGraph(
+  client: IndexifyClient,
+  extractionGraphName: string,
+  extractor: string
+): Promise<string[]> {
+  const nanoid = generateNanoId(8);
+  const extractionPolicy: IExtractionPolicy = {
+    extractor,
+    name: `extractor.${nanoid}`,
+    labels_eq: "source:test",
+  };
+  const resp = await client.createExtractionGraph(
+    extractionGraphName,
+    extractionPolicy
+  );
+
+  expect(resp.indexes.length).toBe(1);
+  return resp.indexes;
+}
+
 test("Create Client", async () => {
   const client = await IndexifyClient.createClient();
   expect(client.namespace).toBe("default");
@@ -25,21 +45,23 @@ test("Create Client", async () => {
 test("Create Namespace", async () => {
   const nanoid = generateNanoId(8);
   const namespaceName = `testnamespace.${nanoid}`;
-  const client = await IndexifyClient.createNamespace({
+
+  const minilmExtractionPolicy: IExtractionPolicy = {
+    id: nanoid,
+    extractor: "tensorlake/minilm-l6",
+    name: `testpolicy`,
+  };
+
+  const extractionGraph: IExtractionGraph = {
+    id: `graph-${nanoid}`,
     namespace: namespaceName,
-    extraction_policies: [
-      {
-        id: nanoid,
-        extractor: "tensorlake/minilm-l6",
-        name: `testpolicy`,
-      },
-    ],
-  }).catch((e) => {
-    if (isAxiosError(e)) {
-      console.log(e.response?.data);
-    }
-    console.log("error creating namespace");
-    throw e;
+    name: `extractionGraph.${nanoid}`,
+    extraction_policies: [minilmExtractionPolicy],
+  };
+
+  const client = await IndexifyClient.createNamespace({
+    name: namespaceName,
+    extractionGraphs: [],
   });
 
   expect(client.namespace).toBe(namespaceName);
@@ -59,34 +81,46 @@ test("Get Extractors", async () => {
 test("Add Documents", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
-    namespace: `test.adddocuments.${nanoid}`,
+    name: `test.adddocuments.${nanoid}`,
   });
+  const extractionGraphName = "extractiongraph";
+  await setupExtractionGraph(
+    client,
+    extractionGraphName,
+    "tensorlake/minilm-l6"
+  );
 
   // add single documents
-  await client.addDocuments({ text: "This is a test", labels: {} });
+  await client.addDocuments(
+    { text: "This is a test", labels: {} },
+    extractionGraphName
+  );
 
   // add multiple documents
-  await client.addDocuments([
-    { text: "This is a test1", labels: {} },
-    { text: "This is a test2", labels: {} },
-  ]);
+  await client.addDocuments(
+    [
+      { text: "This is a test1", labels: {} },
+      { text: "This is a test2", labels: {} },
+    ],
+    extractionGraphName
+  );
 
   // add string
-  await client.addDocuments("This is a test string");
+  await client.addDocuments("This is a test string", extractionGraphName);
 
   // add multiple strings
-  await client.addDocuments([
-    "This is a test string1",
-    "This is a test string 2",
-  ]);
+  await client.addDocuments(
+    ["This is a test string1", "This is a test string 2"],
+    extractionGraphName
+  );
 
   // add mixed
-  await client.addDocuments([
-    "This is a mixed test 1",
-    { text: "This is a mixed test 2", labels: {} },
-  ]);
+  await client.addDocuments(
+    ["This is a mixed test 1", { text: "This is a mixed test 2", labels: {} }],
+    extractionGraphName
+  );
 
-  await new Promise((r) => setTimeout(r, 5000));
+  await new Promise((r) => setTimeout(r, 1));
 
   const content = await client.getContent();
   expect(content.length).toBe(8);
@@ -95,58 +129,75 @@ test("Add Documents", async () => {
 test("Search", async () => {
   const nanoid = generateNanoId(8);
 
-  const policy: IExtractionPolicy = {
-    extractor: "tensorlake/minilm-l6",
-    name: `minilml6.${nanoid}`,
-    labels_eq: "source:test",
-  };
-
   const client = await IndexifyClient.createNamespace({
-    namespace: `testsearch.${nanoid}`,
+    name: `testsearch.${nanoid}`,
   });
 
-  const resp = await client.addExtractionPolicy(policy);
-  expect(resp.index_names.length).toBe(1);
+  // setup extraction policy with graph name
+  const extractionGraphName = "extractiongraph";
+  const indexes = await setupExtractionGraph(
+    client,
+    extractionGraphName,
+    "tensorlake/minilm-l6"
+  );
 
-  const indexName = resp.index_names[0];
+  expect(indexes.length).toBe(1);
 
-  await client.addDocuments([
-    { text: "This is a test1", labels: { source: "test" } },
-    { text: "This is a test2", labels: { source: "test" } },
-  ]);
+  const indexName = indexes[0];
+  await client.addDocuments(
+    [
+      { text: "This is a test1", labels: { source: "test" } },
+      { text: "This is a test2", labels: { source: "test" } },
+    ],
+    extractionGraphName
+  );
 
   await new Promise((r) => setTimeout(r, 10000));
 
   const searchResult = await client.searchIndex(indexName, "test", 3);
-  console.log(searchResult);
   expect(searchResult.length).toBe(2);
 });
 
 test("Upload file", async () => {
-  const policy: IExtractionPolicy = {
-    extractor: "tensorlake/minilm-l6",
-    name: "minilml6",
-    content_source: "ingestion",
-    input_params: {},
-  };
-
   const client = await IndexifyClient.createNamespace({
-    namespace: "testuploadfile",
+    name: "testuploadfile",
   });
-  client.addExtractionPolicy(policy);
-  await client.uploadFile(`${__dirname}/files/test.txt`);
-  console.log("done");
+  const extractionGraphName = "extractiongraph";
+  await setupExtractionGraph(
+    client,
+    extractionGraphName,
+    "tensorlake/minilm-l6"
+  );
+  await client
+    .uploadFile(`${__dirname}/files/test.txt`, extractionGraphName)
+    .catch((e) => {
+      if (isAxiosError(e)) {
+        console.log(e.response?.data);
+      }
+      throw e;
+    });
 });
 
 test("Get content", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
-    namespace: `testgetcontent.${nanoid}`,
+    name: `testgetcontent.${nanoid}`,
   });
-  await client.addDocuments([
-    { text: "This is a test1", labels: { source: "test" } },
-    { text: "This is a test2", labels: { source: "test" } },
-  ]);
+
+  const extractionGraphName = "extractiongraph";
+  await setupExtractionGraph(
+    client,
+    extractionGraphName,
+    "tensorlake/minilm-l6"
+  );
+
+  await client.addDocuments(
+    [
+      { text: "This is a test1", labels: { source: "test" } },
+      { text: "This is a test2", labels: { source: "test" } },
+    ],
+    extractionGraphName
+  );
 
   let content;
 
@@ -164,11 +215,20 @@ test("Get content", async () => {
 test("Download content", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
-    namespace: `testgetcontent.${nanoid}`,
+    name: `testgetcontent.${nanoid}`,
   });
-  await client.addDocuments([
-    { text: "This is a download", labels: { source: "testdownload" } },
-  ]);
+
+  const extractionGraphName = "extractiongraph";
+  await setupExtractionGraph(
+    client,
+    extractionGraphName,
+    "tensorlake/minilm-l6"
+  );
+
+  await client.addDocuments(
+    [{ text: "This is a download", labels: { source: "testdownload" } }],
+    extractionGraphName
+  );
 
   const content = await client.getContent(undefined, "source:testdownload");
   expect(content.length).toBeGreaterThanOrEqual(1);
@@ -177,27 +237,39 @@ test("Download content", async () => {
   expect(resData).toBe("This is a download");
 });
 
-test("Get Extraction Policies", async () => {
+test("Get Extraction Graphs", async () => {
+  const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
-    namespace: "testgetpolicies",
+    name: `testgetextractionpolicies.${nanoid}`,
   });
 
-  await client.addExtractionPolicy({
-    extractor: "tensorlake/minilm-l6",
-    name: "minilml6",
-  });
-  expect(client.extractionPolicies.length).toBe(1);
+  // create extraction graph
+  const extractionGraphName = "extractiongraph";
+  await setupExtractionGraph(
+    client,
+    extractionGraphName,
+    "tensorlake/minilm-l6"
+  );
 
-  const policies = await client.getExtractionPolicies();
-  expect(policies.length).toBe(1);
+  expect(client.extractionGraphs.length).toBe(1);
+
+  const extractionGraphs = await client.getExtractionGraphs();
+  expect(extractionGraphs.length).toBe(1);
 });
 
 test("Ingest remote url", async () => {
-  const client = await IndexifyClient.createClient();
+  const nanoid = generateNanoId(8);
+  const client = await IndexifyClient.createNamespace({
+    name: `testingestremotefile.${nanoid}`,
+  });
+
+  await setupExtractionGraph(client, "extractiongraph", "tensorlake/minilm-l6");
+
   await client.ingestRemoteFile(
     "https://gif-search.diptanu-6d5.workers.dev/OlG-5EjOENZLvlxHcXXmT.gif",
     "image/gif",
     {},
+    "extractiongraph",
     "5EjOENZLvlxHcXXmT"
   );
 });
