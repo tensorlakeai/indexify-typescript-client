@@ -236,12 +236,17 @@ class IndexifyClient {
     return resp.data;
   }
 
-  async getContent(
-    parent_id?: string,
-    labels_eq?: string
-  ): Promise<IContentMetadata[]> {
+  async getExtractedContent({
+    parent_id,
+    source,
+    labels_eq,
+  }: {
+    parent_id?: string;
+    source?: string;
+    labels_eq?: string;
+  } = {}): Promise<IContentMetadata[]> {
     const resp = await this.client.get("content", {
-      params: { parent_id, labels_eq },
+      params: { parent_id, labels_eq, source },
     });
     return resp.data.content_list.map((content: IBaseContentMetadata) => {
       return this.baseContentToContentMetadata(content);
@@ -249,13 +254,13 @@ class IndexifyClient {
   }
 
   async addDocuments(
+    extractionGraphNames: string | string[],
     documents:
       | IDocument
       | string
       | IDocument[]
       | string[]
-      | (IDocument | string)[],
-    extractionGraphNames: string | string[]
+      | (IDocument | string)[]
   ) {
     function isIDocument(obj: any): obj is IDocument {
       return (
