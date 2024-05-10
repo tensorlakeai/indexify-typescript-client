@@ -43,6 +43,7 @@ export interface IBaseContentMetadata {
   source: string;
   size: number;
   hash: string;
+  extraction_graph_names: string[];
 }
 
 export interface IContentMetadata extends IBaseContentMetadata {
