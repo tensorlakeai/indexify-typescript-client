@@ -1,5 +1,5 @@
 import { IndexifyClient } from "../src";
-import { IExtractionGraph, IExtractionPolicy } from "../src/types";
+import { IExtractionPolicy } from "../src/types";
 import { isAxiosError } from "axios";
 
 const fs = require("fs");
@@ -31,31 +31,17 @@ async function setupExtractionGraph(
     extractionGraphName,
     extractionPolicy
   );
-  expect(resp.indexes.length).toBe(1);
-  return resp.indexes;
+  return resp.indexes
 }
 
-test("Create Client", async () => {
+test("createClient", async () => {
   const client = await IndexifyClient.createClient();
   expect(client.namespace).toBe("default");
 });
 
-test("Create Namespace", async () => {
+test("createNamespace", async () => {
   const nanoid = generateNanoId(8);
   const namespaceName = `testnamespace.${nanoid}`;
-
-  const minilmExtractionPolicy: IExtractionPolicy = {
-    id: nanoid,
-    extractor: "tensorlake/minilm-l6",
-    name: `testpolicy`,
-  };
-
-  const extractionGraph: IExtractionGraph = {
-    id: `graph-${nanoid}`,
-    namespace: namespaceName,
-    name: `extractionGraph.${nanoid}`,
-    extraction_policies: [minilmExtractionPolicy],
-  };
 
   const client = await IndexifyClient.createNamespace({
     name: namespaceName,
@@ -70,13 +56,13 @@ test("Create Namespace", async () => {
   );
 });
 
-test("Get Extractors", async () => {
+test("extractors", async () => {
   const client = await IndexifyClient.createClient();
   const extractors = await client.extractors();
   expect(extractors.length).toBeGreaterThanOrEqual(1);
 });
 
-test("Add Documents", async () => {
+test("addDocuments", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `test.adddocuments.${nanoid}`,
@@ -115,15 +101,12 @@ test("Add Documents", async () => {
     { text: "This is a mixed test 2", labels: {} },
   ]);
 
-  await new Promise((r) => setTimeout(r, 1));
-
   const content = await client.getExtractedContent();
   expect(content.length).toBe(8);
 });
 
-test("Search", async () => {
+test("searchIndex", async () => {
   const nanoid = generateNanoId(8);
-
   const client = await IndexifyClient.createNamespace({
     name: `testsearch.${nanoid}`,
   });
@@ -135,10 +118,8 @@ test("Search", async () => {
     extractionGraphName,
     "tensorlake/minilm-l6"
   );
-
-  expect(indexes.length).toBe(1);
-
-  const indexName = indexes[0];
+  
+  expect(indexes.length).toBe(1)
   await client.addDocuments(extractionGraphName, [
     { text: "This is a test1", labels: { source: "test" } },
     { text: "This is a test2", labels: { source: "test" } },
@@ -146,11 +127,11 @@ test("Search", async () => {
 
   await new Promise((r) => setTimeout(r, 10000));
 
-  const searchResult = await client.searchIndex(indexName, "test", 3);
+  const searchResult = await client.searchIndex(indexes[0], "test", 3);
   expect(searchResult.length).toBe(2);
 });
 
-test("Upload file", async () => {
+test("uploadFile", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testuploadfile.${nanoid}`,
@@ -172,7 +153,7 @@ test("Upload file", async () => {
     });
 });
 
-test("Get extracted content", async () => {
+test("getExtractedContent", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testgetcontent.${nanoid}`,
@@ -203,7 +184,7 @@ test("Get extracted content", async () => {
   expect(content.length).toBe(0);
 });
 
-test("Test getStructuredMetadata", async () => {
+test("getStructuredMetadata", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testgetextractedmetadata.${nanoid}`,
@@ -213,23 +194,21 @@ test("Test getStructuredMetadata", async () => {
   await setupExtractionGraph(
     client,
     extractionGraphName,
-    "tensorlake/minilm-l6"
+    "tensorlake/wikipedia"
   );
 
-  await client.addDocuments(extractionGraphName, "test");
-
-  await new Promise((r) => setTimeout(r, 5));
-  const content = await client.getExtractedContent();
-  const extractedMetadata = await client.getStructuredMetadata(content[0].id);
+  const contentId = await client.uploadFile(extractionGraphName, `${__dirname}/files/steph_curry.html`);
+  await new Promise((r) => setTimeout(r, 10000));
+  const extractedMetadata = await client.getStructuredMetadata(contentId);
   expect(extractedMetadata.length).toBeGreaterThanOrEqual(1);
 });
 
-test("Get schemas", async () => {
+test("getSchemas", async () => {
   const client = await IndexifyClient.createClient();
   await client.getSchemas();
 });
 
-test("Download content", async () => {
+test("downloadContent", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testgetcontent.${nanoid}`,
@@ -255,7 +234,7 @@ test("Download content", async () => {
   expect(resData).toBe("This is a download");
 });
 
-test("Get Extraction Graphs", async () => {
+test("getExtractionGraphs", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testgetextractionpolicies.${nanoid}`,
@@ -275,7 +254,7 @@ test("Get Extraction Graphs", async () => {
   expect(extractionGraphs.length).toBe(1);
 });
 
-test("Ingest remote url", async () => {
+test("ingestRemoteFile", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testingestremotefile.${nanoid}`,
@@ -292,7 +271,7 @@ test("Ingest remote url", async () => {
   );
 });
 
-test("Test Extract Method", async () => {
+test("extract", async () => {
   // Test minilm feature extract
   const client = await IndexifyClient.createClient();
   const res = await client.extract({
@@ -323,12 +302,12 @@ test("Test Extract Method", async () => {
   expect(content.features?.[0].data.title).toBe("Stephen Curry");
 });
 
-test("Test generateHashFromString", async () => {
+test("generateHashFromString", async () => {
   const client = await IndexifyClient.createClient();
   expect(client.generateHashFromString("test")).toBe("9f86d081884c7d65");
 });
 
-test("Test generateUniqueHexId", async () => {
+test("generateUniqueHexId", async () => {
   const client = await IndexifyClient.createClient();
   expect(client.generateUniqueHexId()).toHaveLength(16);
 });

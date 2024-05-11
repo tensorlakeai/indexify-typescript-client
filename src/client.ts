@@ -346,7 +346,7 @@ class IndexifyClient {
     fileInput: string | Blob,
     labels: Record<string, any> = {},
     id?: string
-  ): Promise<any> {
+  ): Promise<string> {
     function isBlob(input: any): input is Blob {
       return input instanceof Blob;
     }
@@ -379,12 +379,13 @@ class IndexifyClient {
       });
       
       // Upload File
-      await this.client.post("upload_file", formData, {
+      const res = await this.client.post("upload_file", formData, {
         headers: {
           ...formData.getHeaders(),
         },
         params,
       });
+      return res.data.content_id
     } else {
       // browser
       if (!isBlob(fileInput)) {
@@ -401,9 +402,10 @@ class IndexifyClient {
       });
 
       // Upload File
-      await this.client.post("/upload_file", formData, {
+      const res = await this.client.post("/upload_file", formData, {
         params
       });
+      return res.data.content_id
     }
   }
 
