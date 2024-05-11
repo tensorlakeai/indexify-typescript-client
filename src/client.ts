@@ -62,26 +62,13 @@ class IndexifyClient {
     return new IndexifyClient(
       serviceUrl,
       namespace,
-      response.data.namespace.extraction_graphs.map(
-        (item: {
-          id: string;
-          name: string;
-          extractor: string;
-          filters_eq: string;
-          input_params: Record<string, string | number>;
-          content_source: string;
-        }) => {
-          // abstraction for filters_eq
-          return {
-            id: item.id,
-            name: item.name,
-            extractor: item.extractor,
-            labels_eq: item.filters_eq,
-            input_params: item.input_params,
-            content_source: item.content_source,
-          };
-        }
-      ) as IExtractionGraph[],
+      response.data.namespace.extraction_graphs.map((graph: { extraction_policies: any[]; }) => ({
+        ...graph,
+        extraction_policies: graph.extraction_policies.map((policy: { filters_eq: any; }) => ({
+          ...policy,
+          labels_eq: policy.filters_eq,  // Transform filters_eq to labels_eq
+        }))
+      })),
       IndexifyClient.getHttpsAgent({ mtlsConfig })
     );
   }

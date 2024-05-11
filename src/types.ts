@@ -71,6 +71,7 @@ export interface IExtractionPolicy {
   labels_eq?: string;
   input_params?: Record<string, string | number>;
   content_source?: string;
+  graph_name: string;
 }
 
 export interface ITaskContentMetadata {
