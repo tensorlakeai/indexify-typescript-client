@@ -26,6 +26,7 @@ async function setupExtractionGraph(
   const extractionPolicy: IExtractionPolicy = {
     extractor,
     name: `extractor.${nanoid}`,
+    graph_name: extractionGraphName
   };
   const resp = await client.createExtractionGraph(
     extractionGraphName,
