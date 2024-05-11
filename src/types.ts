@@ -1,6 +1,6 @@
 export interface INamespace {
   name: string;
-  extraction_policies: IExtractionPolicy[];
+  extraction_graphs: IExtractionGraph[];
 }
 
 export interface IEmbeddingSchema {
@@ -43,6 +43,7 @@ export interface IBaseContentMetadata {
   source: string;
   size: number;
   hash: string;
+  extraction_graph_names: string[];
 }
 
 export interface IContentMetadata extends IBaseContentMetadata {
@@ -52,8 +53,15 @@ export interface IContentMetadata extends IBaseContentMetadata {
 export interface IExtractedMetadata {
   id: string;
   content_id: string;
-  metadata: object[];
+  metadata: { [key: string]: any };
   extractor_name: string;
+}
+
+export interface IExtractionGraph {
+  id: string;
+  name: string;
+  namespace: string;
+  extraction_policies: IExtractionPolicy[];
 }
 
 export interface IExtractionPolicy {
@@ -133,8 +141,8 @@ export interface ISearchIndexResponse {
   root_content_metadata?: IContentMetadata;
 }
 
-export interface IAddExtractorPolicyResponse {
-  index_names: string[];
+export interface IAddExtractorGraphResponse {
+  indexes: string[];
 }
 
 export interface IMtlsConfig {

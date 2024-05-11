@@ -3,11 +3,11 @@ import Extractor from "./extractor";
 import {
   IContentMetadata,
   IExtractor,
-  IExtractionPolicy,
+  IExtractionGraph,
   IIndex,
   INamespace,
   ITask,
-  IAddExtractorPolicyResponse,
+  IAddExtractorGraphResponse,
   IDocument,
   ISearchIndexResponse,
   IBaseContentMetadata,
@@ -15,6 +15,8 @@ import {
   IMtlsConfig,
   IContent,
   IExtractResponse,
+  IExtractionPolicy,
+  IExtractedMetadata,
 } from "./types";
 import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
@@ -25,18 +27,18 @@ class IndexifyClient {
   public serviceUrl: string;
   private client: AxiosInstance;
   public namespace: string;
-  public extractionPolicies: IExtractionPolicy[];
+  public extractionGraphs: IExtractionGraph[];
 
   constructor(
     serviceUrl: string = DEFAULT_SERVICE_URL,
     namespace: string = "default",
     // optional mtls config
-    extractionPolicies: IExtractionPolicy[],
+    extractionGraphs: IExtractionGraph[],
     httpsAgent?: any
   ) {
     this.serviceUrl = serviceUrl;
     this.namespace = namespace;
-    this.extractionPolicies = extractionPolicies;
+    this.extractionGraphs = extractionGraphs;
 
     this.client = axios.create({
       baseURL: `${serviceUrl}/namespaces/${namespace}`,
@@ -60,7 +62,7 @@ class IndexifyClient {
     return new IndexifyClient(
       serviceUrl,
       namespace,
-      response.data.namespace.extraction_policies.map(
+      response.data.namespace.extraction_graphs.map(
         (item: {
           id: string;
           name: string;
@@ -79,7 +81,7 @@ class IndexifyClient {
             content_source: item.content_source,
           };
         }
-      ) as IExtractionPolicy[],
+      ) as IExtractionGraph[],
       IndexifyClient.getHttpsAgent({ mtlsConfig })
     );
   }
@@ -166,26 +168,26 @@ class IndexifyClient {
   }
 
   static async createNamespace({
-    namespace,
-    extraction_policies,
+    name,
+    extractionGraphs,
     labels,
     mtlsConfig,
   }: {
-    namespace: string;
-    extraction_policies?: IExtractionPolicy[];
+    name: string;
+    extractionGraphs?: IExtractionGraph[];
     labels?: Record<string, string>;
     mtlsConfig?: IMtlsConfig;
   }) {
     await axios.post(
       `${DEFAULT_SERVICE_URL}/namespaces`,
       {
-        name: namespace,
-        extraction_policies: extraction_policies ?? [],
+        name: name,
+        extraction_graphs: extractionGraphs ?? [],
         labels: labels ?? {},
       },
       { httpsAgent: IndexifyClient.getHttpsAgent({ mtlsConfig }) }
     );
-    const client = await IndexifyClient.createClient({ namespace });
+    const client = await IndexifyClient.createClient({ namespace: name });
     return client;
   }
 
@@ -215,29 +217,36 @@ class IndexifyClient {
     return resp.data["results"];
   }
 
-  async addExtractionPolicy(
-    extractionPolicy: IExtractionPolicy
-  ): Promise<IAddExtractorPolicyResponse> {
-    const resp = await this.client.post("extraction_policies", {
-      extractor: extractionPolicy.extractor,
-      name: extractionPolicy.name,
-      input_params: extractionPolicy.input_params,
-      filters_eq: extractionPolicy.labels_eq,
-      content_source: extractionPolicy.content_source ?? "ingestion",
+  async createExtractionGraph(
+    name: string,
+    extractionPolicies: IExtractionPolicy | IExtractionPolicy[]
+  ): Promise<IAddExtractorGraphResponse> {
+    const policiesArray = Array.isArray(extractionPolicies)
+      ? extractionPolicies
+      : [extractionPolicies];
+
+    const resp = await this.client.post("extraction_graphs", {
+      name,
+      extraction_policies: policiesArray,
     });
 
     // update this.extractor_bindings
-    await this.getExtractionPolicies();
+    await this.getExtractionGraphs();
 
     return resp.data;
   }
 
-  async getContent(
-    parent_id?: string,
-    labels_eq?: string
-  ): Promise<IContentMetadata[]> {
+  async getExtractedContent({
+    parent_id,
+    source,
+    labels_eq,
+  }: {
+    parent_id?: string;
+    source?: string;
+    labels_eq?: string;
+  } = {}): Promise<IContentMetadata[]> {
     const resp = await this.client.get("content", {
-      params: { parent_id, labels_eq },
+      params: { parent_id, labels_eq, source },
     });
     return resp.data.content_list.map((content: IBaseContentMetadata) => {
       return this.baseContentToContentMetadata(content);
@@ -245,6 +254,7 @@ class IndexifyClient {
   }
 
   async addDocuments(
+    extractionGraphNames: string | string[],
     documents:
       | IDocument
       | string
@@ -285,12 +295,24 @@ class IndexifyClient {
       );
     }
 
-    await this.client.post("add_texts", { documents: newDocuments });
+    const extractionGraphNamesArray = Array.isArray(extractionGraphNames)
+      ? extractionGraphNames
+      : [extractionGraphNames];
+
+    await this.client.post("add_texts", {
+      documents: newDocuments,
+      extraction_graph_names: extractionGraphNamesArray,
+    });
   }
 
   async getContentMetadata(id: string): Promise<IContentMetadata> {
     const resp = await this.client.get(`content/${id}`);
     return this.baseContentToContentMetadata(resp.data.content_metadata);
+  }
+
+  async getStructuredMetadata(id: string): Promise<IExtractedMetadata[]> {
+    const resp = await this.client.get(`content/${id}/metadata`);
+    return resp.data.metadata;
   }
 
   async getContentTree(id: string): Promise<IContentMetadata[]> {
@@ -307,9 +329,9 @@ class IndexifyClient {
     }
   }
 
-  async getTasks(extraction_policy?: string): Promise<ITask[]> {
+  async getTasks(extraction_graph?: string): Promise<ITask[]> {
     const resp = await this.client.get("tasks", {
-      params: { extraction_policy },
+      params: { extraction_graph },
     });
     return resp.data.tasks;
   }
@@ -319,41 +341,79 @@ class IndexifyClient {
     return resp.data.schemas;
   }
 
-  async uploadFile(fileInput: string | Blob): Promise<any> {
+  async uploadFile(
+    extractionGraphNames: string | string[],
+    fileInput: string | Blob,
+    labels: Record<string, any> = {},
+    id?: string
+  ): Promise<string> {
     function isBlob(input: any): input is Blob {
       return input instanceof Blob;
     }
+
+    const extractionGraphNamesArray = Array.isArray(extractionGraphNames)
+      ? extractionGraphNames
+      : [extractionGraphNames];
+
+    const params = new URLSearchParams({
+      extraction_graph_names: extractionGraphNamesArray.join(","),
+      ...(id ? { id: id } : {}),
+    });
 
     if (typeof window === "undefined") {
       // node
       if (typeof fileInput !== "string") {
         throw Error("Expected string");
       }
-      const FormData = require("form-data");
+
       const fs = require("fs");
+
+      // Create form
+      const FormData = require("form-data");
       const formData = new FormData();
-      formData.append("file", fs.createReadStream(fileInput as string));
-      await this.client.post("upload_file", formData, {
+      formData.append("file", fs.createReadStream(fileInput as string)); //stream
+
+      // Append labels to the form data
+      Object.keys(labels).forEach((key) => {
+        formData.append(key, labels[key]);
+      });
+      
+      // Upload File
+      const res = await this.client.post("upload_file", formData, {
         headers: {
           ...formData.getHeaders(),
         },
+        params,
       });
+      return res.data.content_id
     } else {
       // browser
       if (!isBlob(fileInput)) {
         throw Error("Expected blob");
       }
+
+      // Create form
       const formData = new FormData();
-      formData.append("file", fileInput);
-      await this.client.post("/upload_file", formData);
+      formData.append("file", fileInput); //blob
+
+      // Append labels to the form data
+      Object.keys(labels).forEach((key) => {
+        formData.append(key, labels[key]);
+      });
+
+      // Upload File
+      const res = await this.client.post("/upload_file", formData, {
+        params
+      });
+      return res.data.content_id
     }
   }
 
-  async getExtractionPolicies(): Promise<IExtractionPolicy[]> {
+  async getExtractionGraphs(): Promise<IExtractionGraph[]> {
     const resp = await this.client.get("");
-    const policies = resp.data.namespace?.extraction_policies ?? [];
-    this.extractionPolicies = policies;
-    return policies;
+    const extractionGraphs = resp.data.namespace?.extraction_graphs ?? [];
+    this.extractionGraphs = extractionGraphs;
+    return extractionGraphs;
   }
 
   async extract({
@@ -385,12 +445,17 @@ class IndexifyClient {
     url: string,
     mime_type: string,
     labels: Record<string, string>,
+    extractionGraphNames: string | string[],
     id?: string
   ): Promise<AxiosResponse> {
+    const extractionGraphNamesArray = Array.isArray(extractionGraphNames)
+      ? extractionGraphNames
+      : [extractionGraphNames];
     const resp = await this.client.post("ingest_remote_file", {
       url,
       mime_type,
       labels,
+      extraction_graph_names: extractionGraphNamesArray,
       id,
     });
     return resp;
