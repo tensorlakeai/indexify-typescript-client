@@ -91,6 +91,13 @@ export interface ITaskContentMetadata {
   extraction_policy_ids: Record<string, number>;
 }
 
+
+export enum TaskStatus {
+  Unknown = 0,
+  Failure = 1,
+  Success = 2
+}
+
 export interface ITask {
   id: string;
   extractor: string;
@@ -99,7 +106,7 @@ export interface ITask {
   namespace: string;
   content_metadata: ITaskContentMetadata;
   input_params: { [key: string]: any };
-  outcome: string;
+  outcome: TaskStatus;
   index_tables: string[];
 }
 

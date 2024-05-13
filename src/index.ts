@@ -12,6 +12,7 @@ import {
   IExtractionPolicy,
   ISearchIndexResponse,
   ITask,
+  TaskStatus,
   IDocument,
   ISchema,
   IContent
@@ -32,6 +33,7 @@ export {
   IExtractionPolicy,
   ISearchIndexResponse,
   ITask,
+  TaskStatus,
   IDocument,
   IContent
 };
