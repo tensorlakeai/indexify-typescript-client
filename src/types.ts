@@ -27,7 +27,7 @@ export interface ISchema {
   columns: Record<
     string,
     {
-      column_type: string;
+      type: string;
       comment?: string;
     }
   >;
