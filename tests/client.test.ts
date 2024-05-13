@@ -205,8 +205,26 @@ test("getStructuredMetadata", async () => {
 });
 
 test("getSchemas", async () => {
-  const client = await IndexifyClient.createClient();
-  await client.getSchemas();
+  const nanoid = generateNanoId(8);
+  const client = await IndexifyClient.createNamespace({
+    name: `testgetcontent.${nanoid}`,
+  });
+  const extractionGraphName = "schematestgraph";
+  await setupExtractionGraph(
+    client,
+    extractionGraphName,
+    "tensorlake/wikipedia"
+  );
+  
+  // upload html
+  await client.uploadFile(extractionGraphName, `${__dirname}/files/steph_curry.html`);
+  await new Promise((r) => setTimeout(r, 10000));
+
+
+  const schemas = await client.getSchemas();
+  expect(schemas.length).toBe(1);
+  expect(schemas[0].extraction_graph_name).toBe(extractionGraphName)
+  expect(Object.keys(schemas[0].columns).length).toBe(13)
 });
 
 test("downloadContent", async () => {

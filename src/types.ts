@@ -21,9 +21,16 @@ export interface IExtractor {
 }
 
 export interface ISchema {
-  columns: Record<string, string | number | boolean>;
-  content_source: string;
+  id: string;
+  extraction_graph_name: string;
   namespace: string;
+  columns: Record<
+    string,
+    {
+      column_type: string;
+      comment?: string;
+    }
+  >;
 }
 export interface IIndex {
   name: string;
@@ -91,11 +98,10 @@ export interface ITaskContentMetadata {
   extraction_policy_ids: Record<string, number>;
 }
 
-
 export enum TaskStatus {
   Unknown = 0,
   Failure = 1,
-  Success = 2
+  Success = 2,
 }
 
 export interface ITask {
