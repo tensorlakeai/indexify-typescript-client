@@ -3,7 +3,6 @@ import Extractor from "./extractor";
 import {
   IContentMetadata,
   IExtractor,
-  IExtractionGraph,
   IIndex,
   INamespace,
   ITask,
@@ -20,6 +19,7 @@ import {
 } from "./types";
 import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
+import ExtractionGraph from "./ExtractionGraph";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
 
@@ -27,13 +27,13 @@ class IndexifyClient {
   public serviceUrl: string;
   private client: AxiosInstance;
   public namespace: string;
-  public extractionGraphs: IExtractionGraph[];
+  public extractionGraphs: ExtractionGraph[];
 
   constructor(
     serviceUrl: string = DEFAULT_SERVICE_URL,
     namespace: string = "default",
     // optional mtls config
-    extractionGraphs: IExtractionGraph[],
+    extractionGraphs: ExtractionGraph[],
     httpsAgent?: any
   ) {
     this.serviceUrl = serviceUrl;
@@ -62,13 +62,17 @@ class IndexifyClient {
     return new IndexifyClient(
       serviceUrl,
       namespace,
-      response.data.namespace.extraction_graphs.map((graph: { extraction_policies: any[]; }) => ({
-        ...graph,
-        extraction_policies: graph.extraction_policies.map((policy: { filters_eq: any; }) => ({
-          ...policy,
-          labels_eq: policy.filters_eq,  // Transform filters_eq to labels_eq
-        }))
-      })),
+      response.data.namespace.extraction_graphs.map(
+        (graph: { extraction_policies: any[] }) => ({
+          ...graph,
+          extraction_policies: graph.extraction_policies.map(
+            (policy: { filters_eq: any }) => ({
+              ...policy,
+              labels_eq: policy.filters_eq, // Transform filters_eq to labels_eq
+            })
+          ),
+        })
+      ),
       IndexifyClient.getHttpsAgent({ mtlsConfig })
     );
   }
@@ -161,7 +165,7 @@ class IndexifyClient {
     mtlsConfig,
   }: {
     name: string;
-    extractionGraphs?: IExtractionGraph[];
+    extractionGraphs?: ExtractionGraph[];
     labels?: Record<string, string>;
     mtlsConfig?: IMtlsConfig;
   }) {
@@ -205,17 +209,14 @@ class IndexifyClient {
   }
 
   async createExtractionGraph(
-    name: string,
-    extractionPolicies: IExtractionPolicy | IExtractionPolicy[]
+    extractionGraph: ExtractionGraph
   ): Promise<IAddExtractorGraphResponse> {
-    const policiesArray = Array.isArray(extractionPolicies)
-      ? extractionPolicies
-      : [extractionPolicies];
-
-    const resp = await this.client.post("extraction_graphs", {
-      name,
-      extraction_policies: policiesArray,
-    });
+    const data = {
+      name: extractionGraph.name,
+      extraction_policies: extractionGraph.extraction_policies,
+    }
+    console.log("create extraction graph", JSON.stringify(data.extraction_policies));
+    const resp = await this.client.post("extraction_graphs", data);
 
     // update this.extractor_bindings
     await this.getExtractionGraphs();
@@ -364,7 +365,7 @@ class IndexifyClient {
       Object.keys(labels).forEach((key) => {
         formData.append(key, labels[key]);
       });
-      
+
       // Upload File
       const res = await this.client.post("upload_file", formData, {
         headers: {
@@ -372,7 +373,7 @@ class IndexifyClient {
         },
         params,
       });
-      return res.data.content_id
+      return res.data.content_id;
     } else {
       // browser
       if (!isBlob(fileInput)) {
@@ -390,13 +391,13 @@ class IndexifyClient {
 
       // Upload File
       const res = await this.client.post("/upload_file", formData, {
-        params
+        params,
       });
-      return res.data.content_id
+      return res.data.content_id;
     }
   }
 
-  async getExtractionGraphs(): Promise<IExtractionGraph[]> {
+  async getExtractionGraphs(): Promise<ExtractionGraph[]> {
     const resp = await this.client.get("");
     const extractionGraphs = resp.data.namespace?.extraction_graphs ?? [];
     this.extractionGraphs = extractionGraphs;

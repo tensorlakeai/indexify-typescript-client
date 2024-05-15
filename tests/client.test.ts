@@ -1,4 +1,5 @@
 import { IndexifyClient } from "../src";
+import ExtractionGraph from "../src/ExtractionGraph";
 import { IExtractionPolicy } from "../src/types";
 import { isAxiosError } from "axios";
 
@@ -23,16 +24,15 @@ async function setupExtractionGraph(
   extractor: string
 ): Promise<string[]> {
   const nanoid = generateNanoId(8);
-  const extractionPolicy: IExtractionPolicy = {
-    extractor,
-    name: `extractor.${nanoid}`,
-    graph_name: extractionGraphName
-  };
-  const resp = await client.createExtractionGraph(
-    extractionGraphName,
-    extractionPolicy
-  );
-  return resp.indexes
+
+  const graph = ExtractionGraph.fromYaml(`
+  name: '${extractionGraphName}'
+  extraction_policies:
+   - extractor: '${extractor}'
+     name: 'extractor.${nanoid}'
+  `);
+  const resp = await client.createExtractionGraph(graph);
+  return resp.indexes;
 }
 
 test("createClient", async () => {
@@ -119,8 +119,8 @@ test("searchIndex", async () => {
     extractionGraphName,
     "tensorlake/minilm-l6"
   );
-  
-  expect(indexes.length).toBe(1)
+
+  expect(indexes.length).toBe(1);
   await client.addDocuments(extractionGraphName, [
     { text: "This is a test1", labels: { source: "test" } },
     { text: "This is a test2", labels: { source: "test" } },
@@ -198,7 +198,10 @@ test("getStructuredMetadata", async () => {
     "tensorlake/wikipedia"
   );
 
-  const contentId = await client.uploadFile(extractionGraphName, `${__dirname}/files/steph_curry.html`);
+  const contentId = await client.uploadFile(
+    extractionGraphName,
+    `${__dirname}/files/steph_curry.html`
+  );
   await new Promise((r) => setTimeout(r, 10000));
   const extractedMetadata = await client.getStructuredMetadata(contentId);
   expect(extractedMetadata.length).toBeGreaterThanOrEqual(1);
@@ -215,16 +218,18 @@ test("getSchemas", async () => {
     extractionGraphName,
     "tensorlake/wikipedia"
   );
-  
-  // upload html
-  await client.uploadFile(extractionGraphName, `${__dirname}/files/steph_curry.html`);
-  await new Promise((r) => setTimeout(r, 10000));
 
+  // upload html
+  await client.uploadFile(
+    extractionGraphName,
+    `${__dirname}/files/steph_curry.html`
+  );
+  await new Promise((r) => setTimeout(r, 10000));
 
   const schemas = await client.getSchemas();
   expect(schemas.length).toBe(1);
-  expect(schemas[0].extraction_graph_name).toBe(extractionGraphName)
-  expect(Object.keys(schemas[0].columns).length).toBe(13)
+  expect(schemas[0].extraction_graph_name).toBe(extractionGraphName);
+  expect(Object.keys(schemas[0].columns).length).toBe(13);
 });
 
 test("downloadContent", async () => {
@@ -319,6 +324,24 @@ test("extract", async () => {
   expect(content.content_type).toBe("text/plain");
   expect(content.features?.[0].data.headline).toBe("Records");
   expect(content.features?.[0].data.title).toBe("Stephen Curry");
+});
+
+test("extractionGraph from yaml", async () => {
+  const graph = ExtractionGraph.fromYaml(`
+  name: 'nbakb'
+  extraction_policies:
+   - extractor: 'tensorlake/chunk-extractor'
+     name: 'chunker'
+     input_params:
+        chunk_size: 1000
+        overlap: 100
+   - extractor: 'tensorlake/minilm-l6'
+     name: 'wikiembedding'
+     content_source: 'chunker'
+  `);
+  expect(graph.extraction_policies.length).toBe(2);
+  expect(graph.id).toBe(undefined);
+  expect(graph.name).toBe("nbakb");
 });
 
 test("generateHashFromString", async () => {

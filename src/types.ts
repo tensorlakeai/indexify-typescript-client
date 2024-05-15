@@ -1,6 +1,8 @@
+import ExtractionGraph from "./ExtractionGraph";
+
 export interface INamespace {
   name: string;
-  extraction_graphs: IExtractionGraph[];
+  extraction_graphs: ExtractionGraph[];
 }
 
 export interface IEmbeddingSchema {
@@ -64,13 +66,6 @@ export interface IExtractedMetadata {
   extractor_name: string;
 }
 
-export interface IExtractionGraph {
-  id: string;
-  name: string;
-  namespace: string;
-  extraction_policies: IExtractionPolicy[];
-}
-
 export interface IExtractionPolicy {
   id?: string;
   extractor: string;
@@ -78,7 +73,7 @@ export interface IExtractionPolicy {
   labels_eq?: string;
   input_params?: Record<string, string | number>;
   content_source?: string;
-  graph_name: string;
+  graph_name?: string;
 }
 
 export interface ITaskContentMetadata {
