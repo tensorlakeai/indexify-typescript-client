@@ -1,3 +1,4 @@
+import ExtractionGraph from "./ExtractionGraph";
 import IndexifyClient from "./client";
 import Extractor from "./extractor";
 import {
@@ -8,7 +9,6 @@ import {
   IIndex,
   IContentMetadata,
   IExtractedMetadata,
-  IExtractionGraph,
   IExtractionPolicy,
   ISearchIndexResponse,
   ITask,
@@ -29,7 +29,7 @@ export {
   IIndex,
   IContentMetadata,
   IExtractedMetadata,
-  IExtractionGraph,
+  ExtractionGraph,
   IExtractionPolicy,
   ISearchIndexResponse,
   ITask,
