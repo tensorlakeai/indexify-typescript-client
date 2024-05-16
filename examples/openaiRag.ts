@@ -7,23 +7,24 @@ import { IndexifyClient, ExtractionGraph } from "getindexify";
 (async () => {
   const client = await IndexifyClient.createClient();
   const graph = ExtractionGraph.fromYaml(`
-      name: 'nbakb'
-      extraction_policies:
-        - extractor: 'tensorlake/minilm-l6'
-          name: 'wikipediaembedding'
-      `);
+  name: 'nbakb'
+  extraction_policies:
+    - extractor: 'tensorlake/chunk-extractor'
+      name: 'chunker'
+      input_params:
+        chunk_size: 1000
+        overlap: 100
+    - extractor: 'tensorlake/minilm-l6'
+      name: 'wikiembedding'
+      content_source: 'chunker'
+  `);
   await client.createExtractionGraph(graph);
 
   // Function to load wikipedia article from query
   async function loadWikipediaArticle(query: string) {
     const page = await wiki().page(query);
     const wikipediaContent = await page.rawContent();
-    // chunk text
-    const splitText = require("split-text");
-    const chunks = splitText(wikipediaContent, { length: 500 });
-    chunks.forEach(async (chunk: string) => {
-      await client.addDocuments("nbakb", chunk);
-    });
+    client.addDocuments("nbakb", wikipediaContent);
   }
 
   // Function to get context
@@ -54,7 +55,7 @@ import { IndexifyClient, ExtractionGraph } from "getindexify";
   const question = "When and where did Kevin Durant win NBA championships?";
   const context = await getContext(
     question,
-    "nbakb.wikipediaembedding.embedding"
+    "nbakb.wikiembedding.embedding"
   );
   const prompt = createPrompt(question, context);
 
