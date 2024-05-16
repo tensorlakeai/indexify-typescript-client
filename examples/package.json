@@ -1,0 +1,26 @@
+{
+  "name": "indexify-openai-rag-example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "openai-rag": "ts-node openaiRag.ts",
+    "langchain-rag": "ts-node langchainRag.ts",
+    "extract-content": "ts-node extractContent.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "@getindexify/langchain": "^0.0.34",
+    "@langchain/core": "^0.1.63",
+    "@langchain/openai": "^0.0.31",
+    "getindexify": "^0.0.43",
+    "langchain": "^0.1.37",
+    "openai": "^4.47.1",
+    "split-text": "^1.0.0",
+    "wikijs": "^6.4.1"
+  }
+}

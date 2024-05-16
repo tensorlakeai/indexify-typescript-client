@@ -21,6 +21,9 @@ const client = await IndexifyClient.createClient();
 
 ## Usage
 
-See the [getting started](https://getindexify.com/getting_started/) guide for examples of how to use the client.
+See the [getting started](https://docs.getindexify.ai/getting_started/) guide on how to use Indexify.
 
 
+## Examples
+
+You can find various examples in our repo [located here](https://github.com/tensorlakeai/indexify-typescript-client/tree/main/examples).

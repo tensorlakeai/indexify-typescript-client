@@ -5,20 +5,25 @@ import {
 } from "@langchain/core/runnables";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { IndexifyClient } from "getindexify";
+import { ExtractionGraph, IndexifyClient } from "getindexify";
 import { IndexifyRetriever } from "@getindexify/langchain";
 import { formatDocumentsAsString } from "langchain/util/document";
 
 (async () => {
   // setup client
-  const client = await IndexifyClient.createNamespace("testlangchain");
-  client.addExtractionPolicy({
-    extractor: "tensorlake/minilm-l6",
-    name: "minilml6",
+  const graph = ExtractionGraph.fromYaml(`
+  name: 'knowledgebase'
+  extraction_policies:
+    - extractor: 'tensorlake/minilm-l6'
+      name: 'minilml6'
+  `);
+  const client = await IndexifyClient.createNamespace({
+    name: "testlangchain",
+    extractionGraphs: [graph],
   });
 
   // add documents
-  client.addDocuments("Lucas is from Los Angeles, California");
+  await client.addDocuments("knowledgebase", "Lucas is from Los Angeles, California");
 
   await new Promise((r) => setTimeout(r, 5000));
 
@@ -48,7 +53,7 @@ import { formatDocumentsAsString } from "langchain/util/document";
   ]);
 
   const question = "Where is Lucas From?";
-  console.log(`Question: ${question}`)
+  console.log(`Question: ${question}`);
   const result = await chain.invoke(question);
-  console.log(result)
+  console.log(result);
 })();
