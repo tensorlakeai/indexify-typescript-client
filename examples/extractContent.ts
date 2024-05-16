@@ -1,4 +1,4 @@
-import { IndexifyClient } from "../src";
+import { IndexifyClient } from "getindexify";
 const fs = require("fs");
 
 // Extract wikipedia article directly from client
