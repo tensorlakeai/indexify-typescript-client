@@ -1,6 +1,6 @@
 {
   "name": "@getindexify/langchain",
-  "version": "0.0.34",
+  "version": "0.0.44",
   "description": "Langchain retriever for indexify client.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/tensorlakeai/indexify-typescript-client#readme",
   "dependencies": {
-    "getindexify": "^0.0.43",
+    "getindexify": "^0.0.44",
     "langchain": "^0.1.21"
   },
   "devDependencies": {
