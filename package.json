@@ -1,6 +1,6 @@
 {
   "name": "getindexify",
-  "version": "0.0.44",
+  "version": "0.0.45",
   "description": "This is the TypeScript client for interacting with the Indexify service.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -16,7 +16,7 @@
     "type": "git",
     "url": "git+https://github.com/tensorlakeai/indexify-typescript-client.git"
   },
-  "author": "",
+  "author": "Lucas Jackson <lucas@tensorlake.ai>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/tensorlakeai/indexify-typescript-client/issues"

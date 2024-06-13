@@ -214,8 +214,7 @@ class IndexifyClient {
     const data = {
       name: extractionGraph.name,
       extraction_policies: extractionGraph.extraction_policies,
-    }
-    console.log("create extraction graph", JSON.stringify(data.extraction_policies));
+    };
     const resp = await this.client.post("extraction_graphs", data);
 
     // update this.extractor_bindings
@@ -225,16 +224,26 @@ class IndexifyClient {
   }
 
   async getExtractedContent({
-    parent_id,
+    parentId,
     source,
-    labels_eq,
+    labelsEq,
+    startId,
+    limit,
   }: {
-    parent_id?: string;
+    parentId?: string;
     source?: string;
-    labels_eq?: string;
+    labelsEq?: string;
+    startId?: string;
+    limit?: number;
   } = {}): Promise<IContentMetadata[]> {
     const resp = await this.client.get("content", {
-      params: { parent_id, labels_eq, source },
+      params: {
+        parent_id: parentId,
+        labels_eq: labelsEq,
+        source,
+        start_id: startId,
+        limit,
+      },
     });
     return resp.data.content_list.map((content: IBaseContentMetadata) => {
       return this.baseContentToContentMetadata(content);
@@ -317,9 +326,24 @@ class IndexifyClient {
     }
   }
 
-  async getTasks(extraction_graph?: string): Promise<ITask[]> {
+  async getTasks({
+    contentId,
+    extractionPolicyId,
+    startId,
+    limit,
+  }: {
+    contentId?: string;
+    extractionPolicyId?: string;
+    startId?: string;
+    limit?: number;
+  }): Promise<ITask[]> {
     const resp = await this.client.get("tasks", {
-      params: { extraction_graph },
+      params: {
+        content_id: contentId,
+        extraction_policy: extractionPolicyId,
+        start_id: startId,
+        limit,
+      },
     });
     return resp.data.tasks;
   }
