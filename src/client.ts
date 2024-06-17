@@ -358,7 +358,7 @@ class IndexifyClient {
     fileInput: string | Blob,
     labels: Record<string, any> = {},
     id?: string
-  ): Promise<string> {
+  ): Promise<string> {    
     function isBlob(input: any): input is Blob {
       return input instanceof Blob;
     }
@@ -383,18 +383,11 @@ class IndexifyClient {
       // Create form
       const FormData = require("form-data");
       const formData = new FormData();
+      formData.append("labels", JSON.stringify(labels));
       formData.append("file", fs.createReadStream(fileInput as string)); //stream
-
-      // Append labels to the form data
-      Object.keys(labels).forEach((key) => {
-        formData.append(key, labels[key]);
-      });
 
       // Upload File
       const res = await this.client.post("upload_file", formData, {
-        headers: {
-          ...formData.getHeaders(),
-        },
         params,
       });
       return res.data.content_id;
@@ -403,15 +396,10 @@ class IndexifyClient {
       if (!isBlob(fileInput)) {
         throw Error("Expected blob");
       }
-
       // Create form
       const formData = new FormData();
-      formData.append("file", fileInput); //blob
-
-      // Append labels to the form data
-      Object.keys(labels).forEach((key) => {
-        formData.append(key, labels[key]);
-      });
+      formData.append("labels", JSON.stringify(labels));
+      formData.append("file", fileInput);
 
       // Upload File
       const res = await this.client.post("/upload_file", formData, {

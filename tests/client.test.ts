@@ -174,14 +174,14 @@ test("getExtractedContent", async () => {
 
   let content;
 
-  content = await client.getExtractedContent({ parent_id: "idontexist" });
+  content = await client.getExtractedContent({ parentId: "idontexist" });
   expect(content.length).toBe(0);
 
-  content = await client.getExtractedContent({ labels_eq: "source:test" });
+  content = await client.getExtractedContent({ labelsEq: "source:test" });
   expect(content.length).toBe(2);
   expect(content[0].content_url).toContain("http://");
 
-  content = await client.getExtractedContent({ labels_eq: "source:nothing" });
+  content = await client.getExtractedContent({ labelsEq: "source:nothing" });
   expect(content.length).toBe(0);
 });
 
@@ -250,7 +250,7 @@ test("downloadContent", async () => {
   ]);
 
   const content = await client.getExtractedContent({
-    labels_eq: "source:testdownload",
+    labelsEq: "source:testdownload",
   });
   expect(content.length).toBeGreaterThanOrEqual(1);
 
