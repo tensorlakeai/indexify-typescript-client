@@ -102,8 +102,8 @@ test("addDocuments", async () => {
     { text: "This is a mixed test 2", labels: {} },
   ]);
 
-  const content = await client.getExtractedContent();
-  expect(content.length).toBe(8);
+  const {contentList} = await client.getExtractedContent();
+  expect(contentList.length).toBe(8);
 });
 
 test("searchIndex", async () => {
@@ -154,7 +154,7 @@ test("uploadFile", async () => {
     });
 });
 
-test("getExtractedContent", async () => {
+test.only("getExtractedContent", async () => {
   const nanoid = generateNanoId(8);
   const client = await IndexifyClient.createNamespace({
     name: `testgetcontent.${nanoid}`,
@@ -172,17 +172,27 @@ test("getExtractedContent", async () => {
     { text: "This is a test2", labels: { source: "test" } },
   ]);
 
-  let content;
+  let contentList;
+  let resp = await client.getExtractedContent({
+    parentId: "idontexist",
+  });
+  contentList = resp.contentList
+  expect(contentList.length).toBe(0);
 
-  content = await client.getExtractedContent({ parentId: "idontexist" });
-  expect(content.length).toBe(0);
+  resp = await client.getExtractedContent({
+    labelsEq: "source:test",
+    returnTotal:true
+  });
+  contentList = resp.contentList
+  expect(contentList.length).toBe(2);
+  expect(resp.total).toBe(2);
+  expect(contentList[0].content_url).toContain("http://");
 
-  content = await client.getExtractedContent({ labelsEq: "source:test" });
-  expect(content.length).toBe(2);
-  expect(content[0].content_url).toContain("http://");
-
-  content = await client.getExtractedContent({ labelsEq: "source:nothing" });
-  expect(content.length).toBe(0);
+  resp = await client.getExtractedContent({
+    labelsEq: "source:nothing",
+  });
+  contentList = resp.contentList
+  expect(contentList.length).toBe(0);
 });
 
 test("getStructuredMetadata", async () => {
@@ -249,12 +259,12 @@ test("downloadContent", async () => {
     { text: "This is a download", labels: { source: "testdownload" } },
   ]);
 
-  const content = await client.getExtractedContent({
+  const { contentList } = await client.getExtractedContent({
     labelsEq: "source:testdownload",
   });
-  expect(content.length).toBeGreaterThanOrEqual(1);
+  expect(contentList.length).toBeGreaterThanOrEqual(1);
 
-  const resData = await client.downloadContent<string>(content[0].id);
+  const resData = await client.downloadContent<string>(contentList[0].id);
   expect(resData).toBe("This is a download");
 });
 
@@ -352,6 +362,18 @@ test("generateHashFromString", async () => {
 test("generateUniqueHexId", async () => {
   const client = await IndexifyClient.createClient();
   expect(client.generateUniqueHexId()).toHaveLength(16);
+});
+
+test("getTasks", async () => {
+  const nanoid = generateNanoId(8);
+  const namespaceName = `testgettasks.${nanoid}`;
+  const client = await IndexifyClient.createNamespace({name:namespaceName});
+  const { tasks, total } = await client.getTasks({
+    limit: 10,
+    returnTotal: true,
+  });
+  expect(tasks.length).toBe(0)
+  expect(total).toBe(0)
 });
 
 // test.only("MTLS", async () => {

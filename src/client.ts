@@ -14,7 +14,6 @@ import {
   IMtlsConfig,
   IContent,
   IExtractResponse,
-  IExtractionPolicy,
   IExtractedMetadata,
 } from "./types";
 import { v4 as uuidv4 } from "uuid";
@@ -229,13 +228,15 @@ class IndexifyClient {
     labelsEq,
     startId,
     limit,
+    returnTotal = false,
   }: {
     parentId?: string;
     source?: string;
     labelsEq?: string;
     startId?: string;
     limit?: number;
-  } = {}): Promise<IContentMetadata[]> {
+    returnTotal?: boolean;
+  } = {}): Promise<{ contentList: IContentMetadata[]; total?: number }> {
     const resp = await this.client.get("content", {
       params: {
         parent_id: parentId,
@@ -243,11 +244,15 @@ class IndexifyClient {
         source,
         start_id: startId,
         limit,
+        return_total: returnTotal,
       },
     });
-    return resp.data.content_list.map((content: IBaseContentMetadata) => {
-      return this.baseContentToContentMetadata(content);
-    });
+    const contentList = resp.data.content_list.map(
+      (content: IBaseContentMetadata) => {
+        return this.baseContentToContentMetadata(content);
+      }
+    );
+    return { contentList, total: resp.data.total };
   }
 
   async addDocuments(
@@ -331,21 +336,24 @@ class IndexifyClient {
     extractionPolicyId,
     startId,
     limit,
+    returnTotal = false,
   }: {
     contentId?: string;
     extractionPolicyId?: string;
     startId?: string;
     limit?: number;
-  }): Promise<ITask[]> {
+    returnTotal: boolean;
+  }): Promise<{ tasks: ITask[]; total?: number }> {
     const resp = await this.client.get("tasks", {
       params: {
         content_id: contentId,
         extraction_policy: extractionPolicyId,
         start_id: startId,
         limit,
+        return_total: returnTotal,
       },
     });
-    return resp.data.tasks;
+    return { tasks: resp.data.tasks, total: resp.data.total };
   }
 
   async getSchemas(): Promise<ISchema[]> {
@@ -358,7 +366,7 @@ class IndexifyClient {
     fileInput: string | Blob,
     labels: Record<string, any> = {},
     id?: string
-  ): Promise<string> {    
+  ): Promise<string> {
     function isBlob(input: any): input is Blob {
       return input instanceof Blob;
     }
