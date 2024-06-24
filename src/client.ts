@@ -336,13 +336,15 @@ class IndexifyClient {
     extractionPolicyId,
     startId,
     limit,
+    outcome,
     returnTotal = false,
   }: {
     contentId?: string;
     extractionPolicyId?: string;
     startId?: string;
     limit?: number;
-    returnTotal: boolean;
+    outcome?: "Unknown" | "Success" | "Failed";
+    returnTotal?: boolean;
   }): Promise<{ tasks: ITask[]; total?: number }> {
     const resp = await this.client.get("tasks", {
       params: {
@@ -350,6 +352,7 @@ class IndexifyClient {
         extraction_policy: extractionPolicyId,
         start_id: startId,
         limit,
+        outcome,
         return_total: returnTotal,
       },
     });
