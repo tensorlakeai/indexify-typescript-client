@@ -196,12 +196,13 @@ class IndexifyClient {
     name: string,
     query: string,
     topK: number,
+    filters: string[],
     include_content: boolean = true
   ): Promise<ISearchIndexResponse[]> {
-    const resp = await this.client.post("search", {
-      index: name,
+    const resp = await this.client.post(`/indexes/${name}/search`, {
       query,
       k: topK,
+      filters: filters,
       include_content,
     });
     return resp.data["results"];
@@ -374,14 +375,9 @@ class IndexifyClient {
       return input instanceof Blob;
     }
 
-    const extractionGraphNamesArray = Array.isArray(extractionGraphNames)
-      ? extractionGraphNames
-      : [extractionGraphNames];
+    let contentId: any;
 
-    const params = new URLSearchParams({
-      extraction_graph_names: extractionGraphNamesArray.join(","),
-      ...(id ? { id: id } : {}),
-    });
+    const params = new URLSearchParams({});
 
     if (typeof window === "undefined") {
       // node
@@ -397,11 +393,24 @@ class IndexifyClient {
       formData.append("labels", JSON.stringify(labels));
       formData.append("file", fs.createReadStream(fileInput as string)); //stream
 
-      // Upload File
-      const res = await this.client.post("upload_file", formData, {
-        params,
-      });
-      return res.data.content_id;
+      for (const extractionGraph of extractionGraphNames) {
+        const response = await this.client.post(
+          `namespaces/${this.namespace}/extraction_graphs/${extractionGraph}/extract`,
+          formData,
+          {
+            params
+          }
+        );
+        const responseJson = response.data;
+        contentId = responseJson.content_id;
+      }
+
+      if (contentId === undefined) {
+        throw new Error("No content ID was retrieved from the extraction process");
+      }
+
+      return contentId;
+
     } else {
       // browser
       if (!isBlob(fileInput)) {
@@ -413,10 +422,23 @@ class IndexifyClient {
       formData.append("file", fileInput);
 
       // Upload File
-      const res = await this.client.post("/upload_file", formData, {
-        params,
-      });
-      return res.data.content_id;
+      for (const extractionGraph of extractionGraphNames) {
+        const response = await this.client.post(
+          `namespaces/${this.namespace}/extraction_graphs/${extractionGraph}/extract`,
+          formData,
+          {
+            params
+          }
+        );
+        const responseJson = response.data;
+        contentId = responseJson.content_id;
+      }
+
+      if (contentId === undefined) {
+        throw new Error("No content ID was retrieved from the extraction process");
+      }
+
+      return contentId;
     }
   }
 
