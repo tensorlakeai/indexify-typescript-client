@@ -128,7 +128,7 @@ test("searchIndex", async () => {
   await client.addDocuments(extractionGraphName, [
     { text: "This is a test1", labels: { source: "test" } },
     { text: "This is a test2", labels: { source: "test" } },
-  ]);
+  ], '123');
 
   await new Promise((r) => setTimeout(r, 10000));
 
