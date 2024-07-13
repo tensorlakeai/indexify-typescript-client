@@ -102,7 +102,11 @@ test("addDocuments", async () => {
     { text: "This is a mixed test 2", labels: {} },
   ]);
 
-  const {contentList} = await client.getExtractedContent();
+  const {contentList} = await client.getExtractedContent({
+    contentId: "idontexist",
+    graphName: extractionGraphName,
+    policyName: "",
+  });
   expect(contentList.length).toBe(8);
 });
 
@@ -124,7 +128,7 @@ test("searchIndex", async () => {
   await client.addDocuments(extractionGraphName, [
     { text: "This is a test1", labels: { source: "test" } },
     { text: "This is a test2", labels: { source: "test" } },
-  ]);
+  ], '123');
 
   await new Promise((r) => setTimeout(r, 10000));
 
@@ -174,14 +178,17 @@ test.only("getExtractedContent", async () => {
 
   let contentList;
   let resp = await client.getExtractedContent({
-    parentId: "idontexist",
+    contentId: "idontexist",
+    graphName: extractionGraphName,
+    policyName: "",
   });
   contentList = resp.contentList
   expect(contentList.length).toBe(0);
 
   resp = await client.getExtractedContent({
-    labelsEq: "source:test",
-    returnTotal:true
+    contentId: "idontexist",
+    graphName: extractionGraphName,
+    policyName: "",
   });
   contentList = resp.contentList
   expect(contentList.length).toBe(2);
@@ -189,7 +196,9 @@ test.only("getExtractedContent", async () => {
   expect(contentList[0].content_url).toContain("http://");
 
   resp = await client.getExtractedContent({
-    labelsEq: "source:nothing",
+    contentId: "idontexist",
+    graphName: extractionGraphName,
+    policyName: ""
   });
   contentList = resp.contentList
   expect(contentList.length).toBe(0);
@@ -260,7 +269,9 @@ test("downloadContent", async () => {
   ]);
 
   const { contentList } = await client.getExtractedContent({
-    labelsEq: "source:testdownload",
+    contentId: "",
+    graphName: extractionGraphName,
+    policyName: ""
   });
   expect(contentList.length).toBeGreaterThanOrEqual(1);
 

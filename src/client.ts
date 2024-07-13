@@ -20,7 +20,7 @@ import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
 import ExtractionGraph from "./ExtractionGraph";
 
-const DEFAULT_SERVICE_URL = "http://localhost:8900"; // Set your default service URL
+const DEFAULT_SERVICE_URL = "http://localhost:8900";
 
 class IndexifyClient {
   public serviceUrl: string;
@@ -31,7 +31,6 @@ class IndexifyClient {
   constructor(
     serviceUrl: string = DEFAULT_SERVICE_URL,
     namespace: string = "default",
-    // optional mtls config
     extractionGraphs: ExtractionGraph[],
     httpsAgent?: any
   ) {
@@ -54,24 +53,10 @@ class IndexifyClient {
     namespace?: string;
     mtlsConfig?: IMtlsConfig;
   } = {}): Promise<IndexifyClient> {
-    const response = await axios.get(`${serviceUrl}/namespaces/${namespace}`, {
-      httpsAgent: IndexifyClient.getHttpsAgent({ mtlsConfig }),
-    });
 
     return new IndexifyClient(
       serviceUrl,
       namespace,
-      response.data.namespace.extraction_graphs.map(
-        (graph: { extraction_policies: any[] }) => ({
-          ...graph,
-          extraction_policies: graph.extraction_policies.map(
-            (policy: { filters_eq: any }) => ({
-              ...policy,
-              labels_eq: policy.filters_eq, // Transform filters_eq to labels_eq
-            })
-          ),
-        })
-      ),
       IndexifyClient.getHttpsAgent({ mtlsConfig })
     );
   }
@@ -102,10 +87,8 @@ class IndexifyClient {
     let content_url: string;
 
     if (content.storage_url.startsWith("http")) {
-      // if content is ingested with remote url use storage url
       content_url = content.storage_url;
     } else {
-      // use streaming api for content url
       content_url = `${this.serviceUrl}/namespaces/${this.namespace}/content/${content.id}/download`;
     }
 
@@ -196,12 +179,13 @@ class IndexifyClient {
     name: string,
     query: string,
     topK: number,
+    filters?: string[],
     include_content: boolean = true
   ): Promise<ISearchIndexResponse[]> {
-    const resp = await this.client.post("search", {
-      index: name,
+    const resp = await this.client.post(`/indexes/${name}/search`, {
       query,
       k: topK,
+      ...(filters !== undefined && { filters }),
       include_content,
     });
     return resp.data["results"];
@@ -216,110 +200,124 @@ class IndexifyClient {
     };
     const resp = await this.client.post("extraction_graphs", data);
 
-    // update this.extractor_bindings
     await this.getExtractionGraphs();
 
     return resp.data;
   }
 
   async getExtractedContent({
-    parentId,
-    source,
-    labelsEq,
-    startId,
-    limit,
-    returnTotal = false,
+    contentId,
+    graphName,
+    policyName,
+    blocking = false
   }: {
-    parentId?: string;
-    source?: string;
-    labelsEq?: string;
-    startId?: string;
-    limit?: number;
-    returnTotal?: boolean;
-  } = {}): Promise<{ contentList: IContentMetadata[]; total?: number }> {
-    const resp = await this.client.get("content", {
-      params: {
-        parent_id: parentId,
-        labels_eq: labelsEq,
-        source,
-        start_id: startId,
-        limit,
-        return_total: returnTotal,
-      },
-    });
-    const contentList = resp.data.content_list.map(
-      (content: IBaseContentMetadata) => {
-        return this.baseContentToContentMetadata(content);
-      }
+    contentId: string;
+    graphName: string;
+    policyName: string;
+    blocking?: boolean;
+  }): Promise<{ contentList: IContentMetadata[]; total?: number }> {
+    if (blocking) {
+      await this.waitForExtraction(contentId);
+    }
+
+    const response = await this.client.get(
+      `/extraction_graphs/${graphName}/extraction_policies/${policyName}/content/${contentId}`,
     );
-    return { contentList, total: resp.data.total };
+
+    const contentTree = response.data;
+    const contentList: IContentMetadata[] = [];
+
+    for (const item of contentTree.content_tree_metadata) {
+      if (item.extraction_graph_names.includes(graphName) && item.source === policyName) {
+        const baseContent: IBaseContentMetadata = {
+          id: item.id,
+          parent_id: item.parent_id,
+          ingested_content_id: contentId,
+          namespace: item.namespace,
+          name: item.name,
+          mime_type: item.mime_type,
+          labels: item.labels,
+          storage_url: item.storage_url,
+          created_at: item.created_at,
+          source: item.source,
+          size: item.size,
+          hash: item.hash,
+          extraction_graph_names: item.extraction_graph_names,
+        };
+
+        const contentMetadata = this.baseContentToContentMetadata(baseContent);
+        contentList.push(contentMetadata);
+      }
+    }
+
+    return { contentList };
   }
 
   async addDocuments(
-    extractionGraphNames: string | string[],
-    documents:
-      | IDocument
-      | string
-      | IDocument[]
-      | string[]
-      | (IDocument | string)[]
-  ) {
-    function isIDocument(obj: any): obj is IDocument {
-      return (
-        obj && typeof obj.text === "string" && typeof obj.labels === "object"
-      );
-    }
-
-    let newDocuments: IDocument[] = [];
-
-    if (typeof documents === "string") {
-      newDocuments.push({ text: documents as string, labels: {} });
-    } else if (isIDocument(documents)) {
-      newDocuments.push(documents);
-    } else if (Array.isArray(documents)) {
-      newDocuments = [
-        ...newDocuments,
-        ...(documents.map((item) => {
-          if (isIDocument(item)) {
-            return item;
-          } else if (typeof item === "string") {
-            return { text: item, labels: {} };
-          } else {
-            throw Error(
-              "Invalid Type: Array items must be string or IDocument"
-            );
-          }
-        }) as IDocument[]),
-      ];
+    extractionGraphs: string | string[],
+    documents: IDocument | string | (IDocument | string)[],
+    docId?: string
+  ): Promise<string[]> {
+    let extractionGraphsArray: string[];
+    if (typeof extractionGraphs === 'string') {
+      extractionGraphsArray = [extractionGraphs];
     } else {
-      throw Error(
-        "Invalid type for documents. Expected Document, str, or list of these."
-      );
+      extractionGraphsArray = extractionGraphs;
     }
 
-    const extractionGraphNamesArray = Array.isArray(extractionGraphNames)
-      ? extractionGraphNames
-      : [extractionGraphNames];
+    let documentsArray: IDocument[];
+    if (documents instanceof Array) {
+      documentsArray = documents.map(doc => {
+        if (typeof doc === 'string') {
+          return { text: doc, labels: {}, id: undefined };
+        } else {
+          return doc;
+        }
+      });
+    } else if (typeof documents === 'string') {
+      documentsArray = [{ text: documents, labels: {}, id: docId }];
+    } else {
+      documentsArray = [documents];
+    }
 
-    await this.client.post("add_texts", {
-      documents: newDocuments,
-      extraction_graph_names: extractionGraphNamesArray,
+    documentsArray.forEach(doc => {
+      doc.labels['mime_type'] = 'text/plain';
     });
+
+    const contentIds: string[] = [];
+
+    for (const extractionGraph of extractionGraphsArray) {
+      for (const document of documentsArray) {
+        const formData = new FormData();
+        formData.append('file', new Blob([document.text], { type: 'text/plain' }), 'document.txt');
+        formData.append('labels', JSON.stringify(document.labels));
+
+        const response = await this.client.post(
+          `namespaces/${this.namespace}/extraction_graphs/${extractionGraph}/extract`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+
+        const contentId = response.data.content_id;
+        contentIds.push(contentId);
+      }
+    }
+
+    return contentIds;
   }
 
   async getContentMetadata(id: string): Promise<IContentMetadata> {
-    const resp = await this.client.get(`content/${id}`);
+    const resp = await this.client.get(`content/${id}/metadata`);
     return this.baseContentToContentMetadata(resp.data.content_metadata);
   }
 
   async getStructuredMetadata(id: string): Promise<IExtractedMetadata[]> {
     const resp = await this.client.get(`content/${id}/metadata`);
     return resp.data.metadata;
-  }
-
-  async getContentTree(id: string): Promise<IContentMetadata[]> {
-    const resp = await this.client.get(`content/${id}/content-tree`);
-    return resp.data.content_tree_metadata;
   }
 
   async downloadContent<T>(id: string): Promise<T> {
@@ -331,32 +329,23 @@ class IndexifyClient {
     }
   }
 
-  async getTasks({
-    contentId,
-    extractionPolicyId,
-    startId,
-    limit,
-    outcome,
-    returnTotal = false,
-  }: {
-    contentId?: string;
-    extractionPolicyId?: string;
-    startId?: string;
-    limit?: number;
-    outcome?: "Unknown" | "Success" | "Failed";
-    returnTotal?: boolean;
-  }): Promise<{ tasks: ITask[]; total?: number }> {
-    const resp = await this.client.get("tasks", {
-      params: {
-        content_id: contentId,
-        extraction_policy: extractionPolicyId,
-        start_id: startId,
-        limit,
-        outcome,
-        return_total: returnTotal,
-      },
-    });
-    return { tasks: resp.data.tasks, total: resp.data.total };
+  async getTasks(
+    extractionGraph: string,
+    extractionPolicy: string,
+    namespace?: string,
+  ): Promise<ITask[]> {
+    let response;
+    if(namespace) {
+      response = await axios.get(
+        `/namespaces/${namespace}/extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks`
+      );
+    } else {
+      response = await this.client.get(
+        `extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks`
+      );
+    }
+
+    return response.data.tasks;
   }
 
   async getSchemas(): Promise<ISchema[]> {
@@ -374,58 +363,72 @@ class IndexifyClient {
       return input instanceof Blob;
     }
 
-    const extractionGraphNamesArray = Array.isArray(extractionGraphNames)
-      ? extractionGraphNames
-      : [extractionGraphNames];
+    let contentId: any;
 
-    const params = new URLSearchParams({
-      extraction_graph_names: extractionGraphNamesArray.join(","),
-      ...(id ? { id: id } : {}),
-    });
+    const params = new URLSearchParams({});
 
     if (typeof window === "undefined") {
-      // node
       if (typeof fileInput !== "string") {
         throw Error("Expected string");
       }
 
       const fs = require("fs");
-
-      // Create form
       const FormData = require("form-data");
       const formData = new FormData();
       formData.append("labels", JSON.stringify(labels));
-      formData.append("file", fs.createReadStream(fileInput as string)); //stream
+      formData.append("file", fs.createReadStream(fileInput as string));
 
-      // Upload File
-      const res = await this.client.post("upload_file", formData, {
-        params,
-      });
-      return res.data.content_id;
+      for (const extractionGraph of Array.isArray(extractionGraphNames) ? extractionGraphNames : [extractionGraphNames]) {
+        const response = await this.client.post(
+          `namespaces/${this.namespace}/extraction_graphs/${extractionGraph}/extract`,
+          formData,
+          {
+            params
+          }
+        );
+        const responseJson = response.data;
+        contentId = responseJson.content_id;
+      }
+
+      if (contentId === undefined) {
+        throw new Error("No content ID was retrieved from the extraction process");
+      }
+
+      return contentId;
+
     } else {
-      // browser
       if (!isBlob(fileInput)) {
         throw Error("Expected blob");
       }
-      // Create form
       const formData = new FormData();
       formData.append("labels", JSON.stringify(labels));
       formData.append("file", fileInput);
 
-      // Upload File
-      const res = await this.client.post("/upload_file", formData, {
-        params,
-      });
-      return res.data.content_id;
+      for (const extractionGraph of Array.isArray(extractionGraphNames) ? extractionGraphNames : [extractionGraphNames]) {
+        const response = await this.client.post(
+          `namespaces/${this.namespace}/extraction_graphs/${extractionGraph}/extract`,
+          formData,
+          {
+            params
+          }
+        );
+        const responseJson = response.data;
+        contentId = responseJson.content_id;
+      }
+
+      if (contentId === undefined) {
+        throw new Error("No content ID was retrieved from the extraction process");
+      }
+
+      return contentId;
     }
   }
 
   async getExtractionGraphs(): Promise<ExtractionGraph[]> {
-    const resp = await this.client.get("");
-    const extractionGraphs = resp.data.namespace?.extraction_graphs ?? [];
-    this.extractionGraphs = extractionGraphs;
-    return extractionGraphs;
-  }
+  const response = await this.client.get(`/extraction_graphs`);
+  const extractionGraphs = response.data.extraction_graphs ?? [];
+  return extractionGraphs;
+}
 
   async extract({
     name,
@@ -450,6 +453,29 @@ class IndexifyClient {
       }
     );
     return resp.data;
+  }
+
+  async waitForExtraction(contentIds: string | string[]): Promise<void> {
+    const ids = typeof contentIds === 'string' ? [contentIds] : contentIds;
+    
+    console.log("Waiting for extraction to complete for content id: ", ids.join(","));
+
+    for (const contentId of ids) {
+      try {
+        const response = await this.client.get(
+          `namespaces/${this.namespace}/content/${contentId}/wait`
+        );
+        
+        console.log("Extraction completed for content id: ", contentId);
+
+        if (response.status >= 400) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } catch (error) {
+        console.error(`Error waiting for extraction of content id ${contentId}:`, error);
+        throw error;
+      }
+    }
   }
 
   async ingestRemoteFile(
@@ -479,6 +505,80 @@ class IndexifyClient {
   generateHashFromString(inputString: string): string {
     const hash = CryptoJS.SHA256(inputString);
     return hash.toString(CryptoJS.enc.Hex).substring(0, 16);
+  }
+
+  async deleteDocuments(documentIds: string[]): Promise<void> {
+    const req = { content_ids: documentIds };
+    await this.client.delete(`namespaces/${this.namespace}/content`, {
+      data: req,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  async updateLabels(documentId: string, labels: Record<string, string>): Promise<void> {
+    const req = { labels };
+    await this.client.put(
+      `namespaces/${this.namespace}/content/${documentId}/labels`,
+      req,
+      { headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  async updateContent(documentId: string, path: string): Promise<void> {
+    const fs = require("fs");
+    const formData = new FormData();
+    formData.append("file", fs.createReadStream(path));
+    await this.client.put(
+      `namespaces/${this.namespace}/content/${documentId}`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+  }
+
+  async listContent(
+    extractionGraph: string,
+    namespace?: string,
+  ): Promise<IContentMetadata[]> {
+    let response;
+    if (namespace) {
+      response = await axios.get(
+        `/namespaces/${namespace}/extraction_graphs/${extractionGraph}/content`
+      );
+    } else {
+      response = await this.client.get(
+        `extraction_graphs/${extractionGraph}/content`
+      );
+    }
+    
+    return response.data.content_list.map((item: IBaseContentMetadata) =>
+      this.baseContentToContentMetadata(item)
+    );
+  }
+
+  async sqlQuery(query: string): Promise<any> {
+    const req = { query };
+    const response = await this.client.post(
+      `namespaces/${this.namespace}/sql_query`,
+      req,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return response.data.rows.map((row: any) => row.data);
+  }
+
+  async linkExtractionGraphs(
+    sourceGraph: string,
+    contentSource: string,
+    linkedGraph: string
+  ): Promise<void> {
+    const req = {
+      content_source: contentSource,
+      linked_graph_name: linkedGraph,
+    };
+    await this.client.post(
+      `namespaces/${this.namespace}/extraction_graphs/${sourceGraph}/links`,
+      req,
+      { headers: { "Content-Type": "application/json" } }
+    );
   }
 }
 

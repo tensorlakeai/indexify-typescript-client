@@ -42,7 +42,7 @@ export interface IIndex {
 export interface IBaseContentMetadata {
   id: string;
   parent_id: string;
-  root_content_id: string;
+  ingested_content_id: string;
   namespace: string;
   name: string;
   mime_type: string;
