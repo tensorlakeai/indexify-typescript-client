@@ -334,7 +334,7 @@ class IndexifyClient {
     extractionPolicy: string,
   ): Promise<ITask[]> {
     const response = await this.client.get(
-      `/extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks/adi`,
+      `/extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks`,
     );
 
     return response.data.tasks;
