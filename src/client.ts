@@ -533,15 +533,35 @@ class IndexifyClient {
   async listContent(
     extractionGraph: string,
     namespace?: string,
+    params?:  {
+      namespace: string;
+      extractionGraph: string;
+      source?: string;
+      parentId?: string;
+      labelsFilter?: string[];
+      startId?: string;
+      limit?: number;
+      returnTotal?: boolean;
+    }
   ): Promise<IContentMetadata[]> {
     let response;
+
+    const defaultParams = {
+      returnTotal: false,
+      ...params
+    };
+
     if (namespace) {
       response = await axios.get(
-        `/namespaces/${namespace}/extraction_graphs/${extractionGraph}/content`
+        `/namespaces/${namespace}/extraction_graphs/${extractionGraph}/content`, {
+          params: defaultParams
+        }
       );
     } else {
       response = await this.client.get(
-        `extraction_graphs/${extractionGraph}/content`
+        `extraction_graphs/${extractionGraph}/content`, {
+          params: defaultParams
+        }
       );
     }
     
