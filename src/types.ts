@@ -159,3 +159,12 @@ export interface IMtlsConfig {
   keyPath: string;
   caPath?: string; // Optional, only if using a custom CA
 }
+
+export interface StateChange {
+  id: number;
+  object_id: string;
+  change_type: string;
+  created_at: number;
+  processed_at: number;
+  refcnt_object_id: string | null;
+}

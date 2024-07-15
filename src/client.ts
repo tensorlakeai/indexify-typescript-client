@@ -332,18 +332,10 @@ class IndexifyClient {
   async getTasks(
     extractionGraph: string,
     extractionPolicy: string,
-    namespace?: string,
   ): Promise<ITask[]> {
-    let response;
-    if(namespace) {
-      response = await axios.get(
-        `/namespaces/${namespace}/extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks`
-      );
-    } else {
-      response = await this.client.get(
-        `extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks`
-      );
-    }
+    const response = await this.client.get(
+      `/extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks/adi`,
+    );
 
     return response.data.tasks;
   }

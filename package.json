@@ -1,6 +1,6 @@
 {
   "name": "getindexify",
-  "version": "0.0.49",
+  "version": "0.0.50",
   "description": "This is the TypeScript client for interacting with the Indexify service.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
