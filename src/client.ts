@@ -161,6 +161,7 @@ class IndexifyClient {
       { httpsAgent: IndexifyClient.getHttpsAgent({ mtlsConfig }) }
     );
     const client = await IndexifyClient.createClient({ namespace: name });
+
     return client;
   }
 
@@ -188,6 +189,7 @@ class IndexifyClient {
       ...(filters !== undefined && { filters }),
       include_content,
     });
+
     return resp.data["results"];
   }
 
@@ -444,6 +446,7 @@ class IndexifyClient {
         input_params: JSON.stringify(input_params),
       }
     );
+
     return resp.data;
   }
 
@@ -566,6 +569,7 @@ class IndexifyClient {
       content_source: contentSource,
       linked_graph_name: linkedGraph,
     };
+
     await this.client.post(
       `namespaces/${this.namespace}/extraction_graphs/${sourceGraph}/links`,
       req,
