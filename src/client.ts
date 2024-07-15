@@ -336,6 +336,8 @@ class IndexifyClient {
     extractionPolicy: string,
     params?: {
       namespace: string;
+      extractionGraph: string;
+      extractionPolicy: string;
       contentId?: string;
       outcome?: string;
       startId?: string;
@@ -345,6 +347,7 @@ class IndexifyClient {
   ): Promise<ITask[]> {
 
     const defaultParams = {
+      namespace: this.namespace,
       extractionGraph: extractionGraph,
       extractionPolicy: extractionPolicy,
       returnTotal: false,
@@ -550,7 +553,10 @@ class IndexifyClient {
 
   async listContent(
     extractionGraph: string,
+    namespace?: string,
     params?:  {
+      namespace: string;
+      extractionGraph: string;
       source?: string;
       parentId?: string;
       labelsFilter?: string[];
@@ -561,6 +567,7 @@ class IndexifyClient {
   ): Promise<{ contentList: IContentMetadata[]; total?: number }> {
 
     const defaultParams = {
+      namespace: namespace,
       extractionGraph: extractionGraph,
       returnTotal: false,
       ...params
