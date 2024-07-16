@@ -334,9 +334,30 @@ class IndexifyClient {
   async getTasks(
     extractionGraph: string,
     extractionPolicy: string,
+    params?: {
+      namespace: string;
+      extractionGraph: string;
+      extractionPolicy: string;
+      contentId?: string;
+      outcome?: string;
+      startId?: string;
+      limit?: number;
+      returnTotal?: boolean;
+    }
   ): Promise<ITask[]> {
+
+    const defaultParams = {
+      namespace: this.namespace,
+      extractionGraph: extractionGraph,
+      extractionPolicy: extractionPolicy,
+      returnTotal: false,
+      ...params
+    };
+
     const response = await this.client.get(
-      `/extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks`,
+      `/extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks`, {
+        params: defaultParams
+      }
     );
 
     return response.data.tasks;
@@ -533,21 +554,38 @@ class IndexifyClient {
   async listContent(
     extractionGraph: string,
     namespace?: string,
-  ): Promise<IContentMetadata[]> {
-    let response;
-    if (namespace) {
-      response = await axios.get(
-        `/namespaces/${namespace}/extraction_graphs/${extractionGraph}/content`
-      );
-    } else {
-      response = await this.client.get(
-        `extraction_graphs/${extractionGraph}/content`
-      );
+    params?:  {
+      namespace: string;
+      extractionGraph: string;
+      source?: string;
+      parentId?: string;
+      labelsFilter?: string[];
+      startId?: string;
+      limit?: number;
+      returnTotal?: boolean;
     }
+  ): Promise<{ contentList: IContentMetadata[]; total?: number }> {
+
+    const defaultParams = {
+      namespace: namespace,
+      extractionGraph: extractionGraph,
+      returnTotal: false,
+      ...params
+    };
+
+    const response = await this.client.get(
+        `extraction_graphs/${extractionGraph}/content`, {
+          params: defaultParams
+        }
+      );
     
-    return response.data.content_list.map((item: IBaseContentMetadata) =>
+    const contentList = response.data.content_list.map((item: IBaseContentMetadata) =>
       this.baseContentToContentMetadata(item)
     );
+
+    const totalCount = response.data.total;
+
+    return { contentList, total: totalCount };
   }
 
   async sqlQuery(query: string): Promise<any> {
