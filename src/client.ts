@@ -354,9 +354,20 @@ class IndexifyClient {
       ...params
     };
 
+    const mergedParams = { ...defaultParams, ...params };
+
     const response = await this.client.get(
       `/extraction_graphs/${extractionGraph}/extraction_policies/${extractionPolicy}/tasks`, {
-        params: defaultParams
+        params: {
+          namespace: mergedParams.namespace,
+          extraction_graph: mergedParams.extractionGraph,
+          extraction_policy: mergedParams.extractionPolicy,
+          content_id: mergedParams.contentId,
+          outcome: mergedParams.outcome,
+          start_id: mergedParams.startId,
+          limit: mergedParams.limit,
+          return_total: mergedParams.returnTotal
+        }
       }
     );
 
@@ -570,14 +581,25 @@ class IndexifyClient {
       namespace: namespace,
       extractionGraph: extractionGraph,
       returnTotal: false,
-      ...params
     };
 
+    const mergedParams = { ...defaultParams, ...params };
+
     const response = await this.client.get(
-        `extraction_graphs/${extractionGraph}/content`, {
-          params: defaultParams
+      `extraction_graphs/${extractionGraph}/content`, 
+      {
+        params: {
+          namespace: mergedParams.namespace,
+          extraction_graph: mergedParams.extractionGraph,
+          source: mergedParams.source,
+          parent_id: mergedParams.parentId,
+          labels_filter: mergedParams.labelsFilter,
+          start_id: mergedParams.startId,
+          limit: mergedParams.limit,
+          return_total: mergedParams.returnTotal
         }
-      );
+      }
+    );
     
     const contentList = response.data.content_list.map((item: IBaseContentMetadata) =>
       this.baseContentToContentMetadata(item)
