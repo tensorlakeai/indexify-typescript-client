@@ -267,18 +267,39 @@ class IndexifyClient {
     contentId: string;
     graphName: string;
     policyName: string;
-  }): Promise<{ contentList: IContentMetadata[]; contentMetadataList?: IContentMetadata[] }> {
+  }): Promise<{ contentTree: IContentMetadata[]; contentList?: IContentMetadata[] }> {
     const response = await this.client.get(
       `extraction_graphs/${graphName}/content/${contentId}/extraction_policies/${policyName}`,
     );
 
-    const contentList = response.data;
+    const contentTree = response.data;
 
-    const contentMetadataList = response.data.content_list.map((item: IBaseContentMetadata) =>
-      this.baseContentToContentMetadata(item)
-    );
+    const contentList: IContentMetadata[] = [];
 
-    return { contentList, contentMetadataList };
+    for (const item of contentTree.content_tree_metadata) {
+      if (item.extraction_graph_names.includes(graphName) && item.source === policyName) {
+        const baseContent: IBaseContentMetadata = {
+          id: item.id,
+          parent_id: item.parent_id,
+          ingested_content_id: contentId,
+          namespace: item.namespace,
+          name: item.name,
+          mime_type: item.mime_type,
+          labels: item.labels,
+          storage_url: item.storage_url,
+          created_at: item.created_at,
+          source: item.source,
+          size: item.size,
+          hash: item.hash,
+          extraction_graph_names: item.extraction_graph_names,
+        };
+
+        const contentMetadata = this.baseContentToContentMetadata(baseContent);
+        contentList.push(contentMetadata);
+      }
+    }
+
+    return { contentTree, contentList };
   }
 
   async addDocuments(
