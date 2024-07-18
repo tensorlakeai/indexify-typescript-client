@@ -127,6 +127,10 @@ class IndexifyClient {
     return this.request("GET", endpoint);
   }
 
+  async post(endpoint: string): Promise<AxiosResponse> {
+    return this.request("POST", endpoint);
+  }
+
   static async namespaces({
     serviceUrl = DEFAULT_SERVICE_URL,
     mtlsConfig,
@@ -251,6 +255,26 @@ class IndexifyClient {
         contentList.push(contentMetadata);
       }
     }
+
+    return { contentList };
+  }
+
+  async getExtractionPolicyContent({
+    contentId,
+    graphName,
+    policyName,
+  }: {
+    contentId: string;
+    graphName: string;
+    policyName: string;
+  }): Promise<{ contentList: IContentMetadata[]; total?: number }> {
+    const response = await this.client.get(
+      `extraction_graphs/${graphName}/content/${contentId}/extraction_policies/${policyName}`,
+    );
+
+    const contentList = response.data.content_list.map((item: IBaseContentMetadata) =>
+      this.baseContentToContentMetadata(item)
+    );
 
     return { contentList };
   }
@@ -383,7 +407,7 @@ class IndexifyClient {
     extractionGraphNames: string | string[],
     fileInput: string | Blob,
     labels: Record<string, any> = {},
-    id?: string
+    newContentId?: string
   ): Promise<string> {
     function isBlob(input: any): input is Blob {
       return input instanceof Blob;
@@ -406,10 +430,12 @@ class IndexifyClient {
 
       for (const extractionGraph of Array.isArray(extractionGraphNames) ? extractionGraphNames : [extractionGraphNames]) {
         const response = await this.client.post(
-          `namespaces/${this.namespace}/extraction_graphs/${extractionGraph}/extract`,
+          `/extraction_graphs/${extractionGraph}/extract`,
           formData,
           {
-            params
+            params :{
+              id: newContentId
+            }
           }
         );
         const responseJson = response.data;
@@ -432,7 +458,7 @@ class IndexifyClient {
 
       for (const extractionGraph of Array.isArray(extractionGraphNames) ? extractionGraphNames : [extractionGraphNames]) {
         const response = await this.client.post(
-          `namespaces/${this.namespace}/extraction_graphs/${extractionGraph}/extract`,
+          `/extraction_graphs/${extractionGraph}/extract`,
           formData,
           {
             params
