@@ -267,16 +267,18 @@ class IndexifyClient {
     contentId: string;
     graphName: string;
     policyName: string;
-  }): Promise<{ contentList: IContentMetadata[]; total?: number }> {
+  }): Promise<{ contentList: IContentMetadata[]; contentMetadataList?: IContentMetadata[] }> {
     const response = await this.client.get(
       `extraction_graphs/${graphName}/content/${contentId}/extraction_policies/${policyName}`,
     );
 
-    const contentList = response.data.content_list.map((item: IBaseContentMetadata) =>
+    const contentList = response.data;
+
+    const contentMetadataList = response.data.content_list.map((item: IBaseContentMetadata) =>
       this.baseContentToContentMetadata(item)
     );
 
-    return { contentList };
+    return { contentList, contentMetadataList };
   }
 
   async addDocuments(
