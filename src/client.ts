@@ -576,12 +576,8 @@ class IndexifyClient {
     return hash.toString(CryptoJS.enc.Hex).substring(0, 16);
   }
 
-  async deleteDocuments(documentIds: string[]): Promise<void> {
-    const req = { content_ids: documentIds };
-    await this.client.delete(`namespaces/${this.namespace}/content`, {
-      data: req,
-      headers: { "Content-Type": "application/json" },
-    });
+  async deleteContent(namespace: string, contentId: string): Promise<void> {
+    await this.client.delete(`namespaces/${namespace}/content/${contentId}`);
   }
 
   async updateLabels(documentId: string, labels: Record<string, string>): Promise<void> {
