@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import Extractor from "./extractor";
 import {
   IContentMetadata,
@@ -129,6 +129,14 @@ class IndexifyClient {
 
   async post(endpoint: string): Promise<AxiosResponse> {
     return this.request("POST", endpoint);
+  }
+
+  async delete(endpoint: string, headers?: Record<string, string>): Promise<AxiosResponse> {
+    return this.request("DELETE", endpoint, { headers });
+  }
+
+  async put(endpoint: string, data: any, config?: AxiosRequestConfig): Promise<AxiosResponse> {
+    return this.request("PUT", endpoint, { ...config, data });
   }
 
   static async namespaces({
@@ -412,7 +420,7 @@ class IndexifyClient {
     );
 
     const tasks = response.data.tasks;
-    const totalTasks = response.data.return_total;
+    const totalTasks = mergedParams.returnTotal ? response.data.total : undefined;
 
     return { tasks, totalTasks };
   }
@@ -580,7 +588,9 @@ class IndexifyClient {
   }
 
   async deleteContent(namespace: string, contentId: string): Promise<void> {
-    await this.client.delete(`namespaces/${namespace}/content/${contentId}`, { headers: { "Content-Type": "application/json" } });
+    await this.delete(`namespaces/${namespace}/content/${contentId}`, {
+      "Content-Type": "application/json"
+    });
   }
 
   async updateLabels(documentId: string, labels: Record<string, string>): Promise<void> {
@@ -596,7 +606,7 @@ class IndexifyClient {
     const fs = require("fs");
     const formData = new FormData();
     formData.append("file", fs.createReadStream(path));
-    await this.client.put(
+    await this.put(
       `namespaces/${this.namespace}/content/${documentId}`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
