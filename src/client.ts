@@ -384,7 +384,7 @@ class IndexifyClient {
       limit?: number;
       returnTotal?: boolean;
     }
-  ): Promise<ITask[]> {
+  ): Promise<{ tasks: ITask[], totalTasks?: number}> {
 
     const defaultParams = {
       namespace: this.namespace,
@@ -411,7 +411,10 @@ class IndexifyClient {
       }
     );
 
-    return response.data.tasks;
+    const tasks = response.data.tasks;
+    const totalTasks = response.data.return_total;
+
+    return { tasks, totalTasks };
   }
 
   async getSchemas(): Promise<ISchema[]> {
@@ -577,7 +580,7 @@ class IndexifyClient {
   }
 
   async deleteContent(namespace: string, contentId: string): Promise<void> {
-    await this.client.delete(`namespaces/${namespace}/content/${contentId}`);
+    await this.client.delete(`namespaces/${namespace}/content/${contentId}`, { headers: { "Content-Type": "application/json" } });
   }
 
   async updateLabels(documentId: string, labels: Record<string, string>): Promise<void> {
