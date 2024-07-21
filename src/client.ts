@@ -620,6 +620,7 @@ class IndexifyClient {
       namespace: string;
       extractionGraph: string;
       source?: string;
+      ingestedContentId?: string;
       parentId?: string;
       labelsFilter?: string[];
       startId?: string;
@@ -643,6 +644,7 @@ class IndexifyClient {
           namespace: mergedParams.namespace,
           extraction_graph: mergedParams.extractionGraph,
           source: mergedParams.source,
+          ingested_content_id: mergedParams.ingestedContentId,
           parent_id: mergedParams.parentId,
           labels_filter: mergedParams.labelsFilter,
           start_id: mergedParams.startId,
