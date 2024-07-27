@@ -21,6 +21,11 @@ import {
 export {
   IndexifyClient,
   Extractor,
+  ExtractionGraph,
+  TaskStatus,
+};
+
+export type {
   INamespace,
   IEmbeddingSchema,
   IExtractorSchema,
@@ -29,11 +34,9 @@ export {
   IIndex,
   IContentMetadata,
   IExtractedMetadata,
-  ExtractionGraph,
   IExtractionPolicy,
   ISearchIndexResponse,
   ITask,
-  TaskStatus,
   IDocument,
   IContent
 };

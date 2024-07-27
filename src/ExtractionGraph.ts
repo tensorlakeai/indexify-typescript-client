@@ -2,52 +2,26 @@ import { IExtractionPolicy } from "./types";
 import yaml from "yaml";
 
 class ExtractionGraph {
-  id?: string;
-  name: string;
-  namespace?: string;
-  extraction_policies: IExtractionPolicy[];
-
-  constructor({
-    id,
-    name,
-    namespace,
-    extraction_policies,
-  }: {
-    id?: string;
-    name: string;
-    namespace?: string;
-    extraction_policies: IExtractionPolicy[];
-  }) {
-    this.id = id;
-    this.name = name;
-    this.namespace = namespace;
-    this.extraction_policies = extraction_policies;
-  }
+  constructor(
+    public readonly name: string,
+    public readonly extraction_policies: IExtractionPolicy[],
+    public readonly id?: string,
+    public readonly namespace?: string
+  ) {}
 
   static fromDict(json: Record<string, any>): ExtractionGraph {
-    if ("namespace" in json) {
-      delete json["namespace"];
-    }
-    return new ExtractionGraph({
-      id: json.id,
-      name: json.name,
-      extraction_policies: json.extraction_policies,
-    });
+    const { id, name, extraction_policies, ...rest } = json;
+    return new ExtractionGraph(name, extraction_policies, id);
   }
 
   static fromYaml(spec: string): ExtractionGraph {
-    const json = yaml.parse(spec);
-    return ExtractionGraph.fromDict(json);
+    return ExtractionGraph.fromDict(yaml.parse(spec));
   }
 
   toDict(): Record<string, any> {
-    const filteredDict: Record<string, any> = {};
-    for (const key in this) {
-      if (this[key] !== null && this[key] !== undefined) {
-        filteredDict[key] = this[key];
-      }
-    }
-    return filteredDict;
+    return Object.fromEntries(
+      Object.entries(this).filter(([_, value]) => value != null)
+    );
   }
 }
 

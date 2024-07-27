@@ -1,11 +1,11 @@
 import { IExtractor, IExtractorSchema } from "./types";
 
 class Extractor {
-  public name: string;
-  public input_mime_types: string[];
-  public description: string;
-  public input_params: Record<string, string | number>;
-  public outputs: IExtractorSchema;
+  public readonly name: string;
+  public readonly input_mime_types: string[];
+  public readonly description: string;
+  public readonly input_params: Record<string, string | number>;
+  public readonly outputs: IExtractorSchema;
 
   constructor(data: IExtractor) {
     this.name = data.name;
