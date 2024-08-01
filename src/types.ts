@@ -161,3 +161,15 @@ export interface StateChange extends IBase {
   processed_at: number;
   refcnt_object_id: string | null;
 }
+
+export interface ExtractionPolicyStatus {
+  pending: number;
+  success: number;
+  failure: number;
+}
+
+export interface ExtractionGraphAnalytics {
+  task_analytics: {
+    [policyName: string]: ExtractionPolicyStatus;
+  };
+}

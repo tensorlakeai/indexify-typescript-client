@@ -15,6 +15,7 @@ import {
   IContent,
   IExtractResponse,
   IExtractedMetadata,
+  ExtractionGraphAnalytics,
 } from "./types";
 import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
@@ -450,6 +451,20 @@ class IndexifyClient {
     return resp.data;
   }
 
+  async getExtractionGraphAnalytics({
+    namespace,
+    extractionGraph,
+  }: {
+    namespace: string;
+    extractionGraph: string;
+  }): Promise<ExtractionGraphAnalytics> {
+    const response = await this.client.get(
+      `namespaces/${namespace}/extraction_graphs/${extractionGraph}/analytics`
+    );
+
+    return response.data;
+  }
+
   async waitForExtraction(contentIds: string | string[]): Promise<void> {
     const ids = Array.isArray(contentIds) ? contentIds : [contentIds];
     
@@ -525,51 +540,51 @@ class IndexifyClient {
   }
 
   async listContent(
-  extractionGraph: string,
-  namespace?: string,
-  params?: {
-    namespace: string;
-    extractionGraph: string;
-    source?: string;
-    ingestedContentId?: string;
-    parentId?: string;
-    labelsFilter?: string[];
-    startId?: string;
-    limit?: number;
-    returnTotal?: boolean;
+    extractionGraph: string,
+    namespace?: string,
+    params?: {
+      namespace: string;
+      extractionGraph: string;
+      source?: string;
+      ingestedContentId?: string;
+      parentId?: string;
+      labelsFilter?: string[];
+      startId?: string;
+      limit?: number;
+      returnTotal?: boolean;
+    }
+  ): Promise<{ contentList: IContentMetadata[]; total?: number }> {
+    const defaultParams = {
+      namespace: namespace || this.namespace,
+      extraction_graph: extractionGraph,
+      return_total: false,
+    };
+
+    const mergedParams = {
+      ...defaultParams,
+      ...params,
+      namespace: params?.namespace || namespace || this.namespace,
+      extraction_graph: params?.extractionGraph || extractionGraph,
+      labels_filter: params?.labelsFilter,
+      ingested_content_id: params?.ingestedContentId,
+      parent_id: params?.parentId,
+      start_id: params?.startId,
+    };
+
+    const response = await this.client.get(
+      `extraction_graphs/${mergedParams.extraction_graph}/content`, 
+      { params: mergedParams }
+    );
+    
+    const contentList = response.data.content_list.map((item: IBaseContentMetadata) =>
+      this.baseContentToContentMetadata(item)
+    );
+
+    return { 
+      contentList, 
+      total: mergedParams.return_total ? response.data.total : undefined 
+    };
   }
-): Promise<{ contentList: IContentMetadata[]; total?: number }> {
-  const defaultParams = {
-    namespace: namespace || this.namespace,
-    extraction_graph: extractionGraph,
-    return_total: false,
-  };
-
-  const mergedParams = {
-    ...defaultParams,
-    ...params,
-    namespace: params?.namespace || namespace || this.namespace,
-    extraction_graph: params?.extractionGraph || extractionGraph,
-    labels_filter: params?.labelsFilter,
-    ingested_content_id: params?.ingestedContentId,
-    parent_id: params?.parentId,
-    start_id: params?.startId,
-  };
-
-  const response = await this.client.get(
-    `extraction_graphs/${mergedParams.extraction_graph}/content`, 
-    { params: mergedParams }
-  );
-  
-  const contentList = response.data.content_list.map((item: IBaseContentMetadata) =>
-    this.baseContentToContentMetadata(item)
-  );
-
-  return { 
-    contentList, 
-    total: mergedParams.return_total ? response.data.total : undefined 
-  };
-}
 
   async sqlQuery(query: string): Promise<any> {
     const response = await this.client.post(
