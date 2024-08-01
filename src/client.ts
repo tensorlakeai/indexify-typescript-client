@@ -459,7 +459,7 @@ class IndexifyClient {
     extractionGraph: string;
   }): Promise<ExtractionGraphAnalytics> {
     const response = await this.client.get(
-      `namespaces/${namespace}/extraction_graphs/${extractionGraph}/analytics`
+      `/extraction_graphs/${extractionGraph}/analytics`
     );
 
     return response.data;
