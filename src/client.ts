@@ -370,63 +370,58 @@ class IndexifyClient {
   }
 
   async uploadFile(
-    extractionGraphNames: string | string[],
+    extractionGraphNames: string,
     fileInput: string | Blob,
     labels: Record<string, any> = {},
     newContentId?: string
   ): Promise<string> {
     const isNodeEnv = typeof window === "undefined";
-    const extractionGraphNamesArray = Array.isArray(extractionGraphNames) ? extractionGraphNames : [extractionGraphNames];
+    let formData: any;
     
-    for (const extractionGraph of extractionGraphNamesArray) {
-      let formData: any;
-      
-      if (isNodeEnv) {
-        if (typeof fileInput !== "string") {
-          throw Error("Expected string for file path in Node environment");
-        }
-        const fs = require("fs");
-        const FormData = require("form-data");
-        formData = new FormData();
-        formData.append("labels", JSON.stringify(labels));
-        formData.append("file", fs.createReadStream(fileInput));
-      } else {
-        if (!(fileInput instanceof Blob)) {
-          throw Error("Expected Blob in browser environment");
-        }
-        formData = new FormData();
-        formData.append("labels", JSON.stringify(labels));
-        formData.append("file", fileInput);
+    if (isNodeEnv) {
+      if (typeof fileInput !== "string") {
+        throw Error("Expected string for file path in Node environment");
       }
-
-      try {
-        const response = await this.client.post(
-          `/namespaces/default/extraction_graphs/${extractionGraph}/extract`,
-          formData,
-          {
-            params: newContentId ? { id: newContentId } : undefined,
-            headers: { 
-              "Content-Type": "multipart/form-data",
-              "accept": "*/*"
-            }
-          }
-        );
-
-        const contentId = response.data.content_id;
-
-        if (contentId) {
-          console.log(`Content ID retrieved: ${contentId}`);
-          return contentId;
-        } else {
-          console.warn(`Unexpected: No content ID found in response for extraction graph: ${extractionGraph}`);
-        }
-      } catch (error) {
-        console.error(`Error during extraction for graph ${extractionGraph}:`, error);
+      const fs = require("fs");
+      const FormData = require("form-data");
+      formData = new FormData();
+      formData.append("labels", JSON.stringify(labels));
+      formData.append("file", fs.createReadStream(fileInput));
+    } else {
+      if (!(fileInput instanceof Blob)) {
+        throw Error("Expected Blob in browser environment");
       }
+      formData = new FormData();
+      formData.append("labels", JSON.stringify(labels));
+      formData.append("file", fileInput);
     }
-    
-    console.error(`Failed to retrieve content ID for all extraction graphs: ${extractionGraphNamesArray.join(", ")}`);
-    return "";
+
+    try {
+      const response = await this.client.post(
+        `/extraction_graphs/${extractionGraphNames}/extract`,
+        formData,
+        {
+          params: newContentId ? { id: newContentId } : undefined,
+          headers: { 
+            "Content-Type": "multipart/form-data",
+            "accept": "*/*"
+          }
+        }
+      );
+
+      const contentId = response.data.content_id;
+
+      if (contentId) {
+        console.log(`Content ID retrieved: ${contentId}`);
+        return contentId;
+      } else {
+        console.warn(`Unexpected: No content ID found in response for extraction graph: ${extractionGraphNames}`);
+        return "";
+      }
+    } catch (error) {
+      console.error(`Error during extraction for graph ${extractionGraphNames}:`, error);
+      throw error; // Re-throw the error to be handled by the caller
+    }
   }
 
   async getExtractionGraphs(): Promise<ExtractionGraph[]> {
