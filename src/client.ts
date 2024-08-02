@@ -378,8 +378,6 @@ class IndexifyClient {
     const isNodeEnv = typeof window === "undefined";
     const extractionGraphNamesArray = Array.isArray(extractionGraphNames) ? extractionGraphNames : [extractionGraphNames];
     
-    let contentId: string | undefined;
-
     for (const extractionGraph of extractionGraphNamesArray) {
       let formData: any;
       
@@ -401,27 +399,34 @@ class IndexifyClient {
         formData.append("file", fileInput);
       }
 
-      const response = await this.client.post(
-        `/extraction_graphs/${extractionGraph}/extract`,
-        formData,
-        {
-          params: { id: newContentId },
-          headers: { 
-            "Content-Type": "multipart/form-data",
-            "accept": "*/*"
+      try {
+        const response = await this.client.post(
+          `/namespaces/default/extraction_graphs/${extractionGraph}/extract`,
+          formData,
+          {
+            params: newContentId ? { id: newContentId } : undefined,
+            headers: { 
+              "Content-Type": "multipart/form-data",
+              "accept": "*/*"
+            }
           }
+        );
+
+        const contentId = response.data.content_id;
+
+        if (contentId) {
+          console.log(`Content ID retrieved: ${contentId}`);
+          return contentId;
+        } else {
+          console.warn(`Unexpected: No content ID found in response for extraction graph: ${extractionGraph}`);
         }
-      );
-
-      contentId = response.data.content_id || newContentId;
-
-      if (contentId) {
-        return contentId;
+      } catch (error) {
+        console.error(`Error during extraction for graph ${extractionGraph}:`, error);
       }
-
     }
-
-    throw new Error("No content ID was retrieved from the extraction process");
+    
+    console.error(`Failed to retrieve content ID for all extraction graphs: ${extractionGraphNamesArray.join(", ")}`);
+    return "";
   }
 
   async getExtractionGraphs(): Promise<ExtractionGraph[]> {
