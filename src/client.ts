@@ -406,18 +406,22 @@ class IndexifyClient {
         formData,
         {
           params: { id: newContentId },
-          headers: { "Content-Type": "multipart/form-data" }
+          headers: { 
+            "Content-Type": "multipart/form-data",
+            "accept": "*/*"
+          }
         }
       );
 
-      contentId = response.data.content_id;
+      contentId = response.data.content_id || newContentId;
+
+      if (contentId) {
+        return contentId;
+      }
+
     }
 
-    if (!contentId) {
-      throw new Error("No content ID was retrieved from the extraction process");
-    }
-
-    return contentId;
+    throw new Error("No content ID was retrieved from the extraction process");
   }
 
   async getExtractionGraphs(): Promise<ExtractionGraph[]> {
@@ -473,7 +477,7 @@ class IndexifyClient {
     for (const contentId of ids) {
       try {
         const response = await this.client.get(
-          `namespaces/${this.namespace}/content/${contentId}/wait`
+          `/content/${contentId}/wait`
         );
         
         console.log("Extraction completed for content id: ", contentId);
