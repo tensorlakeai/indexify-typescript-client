@@ -525,7 +525,7 @@ class IndexifyClient {
   }
 
   async deleteExtractionGraph(namespace: string, extractionGraph: string): Promise<void> {
-    await this.delete(`namespaces/${namespace}/extraction_graph/${extractionGraph}`, {
+    await this.delete(`namespaces/${namespace}/extraction_graphs/${extractionGraph}`, {
       "Content-Type": "application/json"
     });
   }
