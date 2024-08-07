@@ -524,6 +524,12 @@ class IndexifyClient {
     });
   }
 
+  async deleteExtractionGraph(namespace: string, extractionGraph: string): Promise<void> {
+    await this.delete(`namespaces/${namespace}/extraction_graph/${extractionGraph}`, {
+      "Content-Type": "application/json"
+    });
+  }
+
   async updateLabels(documentId: string, labels: Record<string, string>): Promise<void> {
     await this.client.put(
       `namespaces/${this.namespace}/content/${documentId}/labels`,
