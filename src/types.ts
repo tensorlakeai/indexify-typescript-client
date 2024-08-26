@@ -62,6 +62,7 @@ export interface IBaseContentMetadata extends IMetadata {
 
 export interface IContentMetadata extends IBaseContentMetadata {
   content_url: string;
+  extracted_metadata: Record<string, any>;
 }
 
 export interface IExtractedMetadata extends IBase {
