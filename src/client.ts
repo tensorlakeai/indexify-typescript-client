@@ -82,7 +82,12 @@ class IndexifyClient {
     const content_url = content.storage_url.startsWith("http")
       ? content.storage_url
       : `${this.serviceUrl}/namespaces/${this.namespace}/content/${content.id}/download`;
-    return { ...content, content_url };
+    
+    return {
+      ...content,
+      content_url,
+      extracted_metadata: {}
+    };
   }
 
   static getHttpsAgent({ mtlsConfig }: { mtlsConfig?: IMtlsConfig }): any | undefined {
