@@ -20,13 +20,9 @@ export interface ComputeGraph {
   namespace: string;
   description: string;
   start_node: Node;
-  edges: Record<string, Node[]>;
+  nodes: Record<string, Node>;
+  edges: Record<string, string[]>;
   created_at?: number;
-}
-
-export interface ComputeGraphCreateType {
-  compute_graph: ComputeGraph;
-  code: string; // This will be a file in the actual request
 }
 
 export interface ComputeGraphsList {
@@ -51,7 +47,7 @@ export interface GraphInvocations {
 }
 
 export interface IndexifyAPIError {
-  status_code: number; // Assuming StatusCode is a number
+  status_code: number;
   message: string;
 }
 
@@ -73,9 +69,12 @@ export type TaskOutcome = "Unknown" | "Success" | "Failure";
 
 export interface Task {
   id: string;
-  status: TaskOutcome;
-  created_at: number;
-  updated_at: number;
+  namespace: string;
+  compute_fn: string;
+  compute_graph: string;
+  invocation_id: string;
+  input_key: string;
+  outcome: TaskOutcome;
 }
 
 export interface Tasks {
@@ -83,33 +82,8 @@ export interface Tasks {
   cursor?: string | null;
 }
 
-// Additional types that were used in the IndexifyClient but not explicitly defined in the OpenAPI spec
-
-export interface IMtlsConfig {
-  certPath: string;
-  keyPath: string;
-  caPath?: string;
+export interface ComputeGraphCreateType {
+  compute_graph: ComputeGraph;
+  code: string;
 }
 
-export interface IDocument {
-  text: string;
-  labels: Record<string, string>;
-  id?: string;
-}
-
-export interface IContentMetadata {
-  id: string;
-  parent_id?: string;
-  ingested_content_id: string;
-  namespace: string;
-  name: string;
-  mime_type: string;
-  labels: Record<string, string>;
-  storage_url: string;
-  content_url: string;
-  created_at: number;
-  source: string;
-  size: number;
-  hash: string;
-  extraction_graph_names: string[];
-}

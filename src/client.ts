@@ -1,193 +1,223 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
-import {
-  IContentMetadata,
-  Namespace as INamespace,
-  Task as ITask,
-  IDocument,
-  IMtlsConfig,
-  ComputeGraph,
-  CreateNamespace,
-  GraphInvocations,
-  InvocationResult,
-  Task,
-} from "./types";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
+import {
+  Namespace,
+  ComputeGraph,
+  CreateNamespace,
+  IndexifyAPIError,
+  InvocationResult,
+  Tasks,
+  ComputeGraphCreateType,
+  ComputeGraphsList,
+  GraphInvocations,
+  NamespaceList
+} from "./types";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900";
 
+class IndexifyError extends Error {
+  constructor(message: string, public statusCode?: number, public response?: any) {
+    super(message);
+    this.name = "IndexifyError";
+  }
+}
+
 class IndexifyClient {
-  private client: AxiosInstance;
+  private axiosInstance: AxiosInstance;
 
-  constructor(
-    public serviceUrl: string = DEFAULT_SERVICE_URL,
-    public namespace: string = "default",
-    httpsAgent?: any
+  private constructor(
+    private readonly serviceUrl: string = DEFAULT_SERVICE_URL,
+    private readonly _namespace: string = "default",
+    config?: AxiosRequestConfig
   ) {
-    this.client = axios.create({
-      baseURL: `${serviceUrl}/namespaces/${namespace}`,
-      httpsAgent,
+    this.axiosInstance = axios.create({
+      baseURL: `${serviceUrl}/namespaces/${_namespace}`,
+      ...config,
     });
-  }
-
-  static async createClient({
-    serviceUrl = DEFAULT_SERVICE_URL,
-    namespace = "default",
-    mtlsConfig,
-  }: {
-    serviceUrl?: string;
-    namespace?: string;
-    mtlsConfig?: IMtlsConfig;
-  } = {}): Promise<IndexifyClient> {
-    return new IndexifyClient(
-      serviceUrl,
-      namespace,
-      IndexifyClient.getHttpsAgent({ mtlsConfig })
-    );
-  }
-
-  private async request(
-    method: string,
-    endpoint: string,
-    options: any = {}
-  ): Promise<AxiosResponse> {
-    try {
-      return await this.client.request({
-        method,
-        url: endpoint,
-        ...options,
-      });
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error(`Error: ${error.message}`);
-      }
-      throw error;
-    }
-  }
-
-  static getHttpsAgent({ mtlsConfig }: { mtlsConfig?: IMtlsConfig }): any | undefined {
-    if (!mtlsConfig) return undefined;
-    if (typeof window !== "undefined") {
-      throw new Error("mTLS support is not available in browser environments.");
-    }
-    const fs = require("fs");
-    const { Agent } = require("https");
-    return new Agent({
-      cert: fs.readFileSync(mtlsConfig.certPath),
-      key: fs.readFileSync(mtlsConfig.keyPath),
-      ...(mtlsConfig.caPath && { ca: fs.readFileSync(mtlsConfig.caPath) }),
-      rejectUnauthorized: true,
-    });
-  }
-
-  async get(endpoint: string): Promise<AxiosResponse> {
-    return this.request("GET", endpoint);
-  }
-
-  async post(endpoint: string, data?: any): Promise<AxiosResponse> {
-    return this.request("POST", endpoint, { data });
-  }
-
-  async delete(endpoint: string): Promise<AxiosResponse> {
-    return this.request("DELETE", endpoint);
   }
 
   static async namespaces({
     serviceUrl = DEFAULT_SERVICE_URL,
-    mtlsConfig,
+    config,
   }: {
     serviceUrl?: string;
-    mtlsConfig?: IMtlsConfig;
-  } = {}): Promise<INamespace[]> {
-    const response = await axios.get(`${serviceUrl}/namespaces`, {
-      httpsAgent: IndexifyClient.getHttpsAgent({ mtlsConfig }),
-    });
-    return response.data.namespaces;
+    config?: AxiosRequestConfig;
+  } = {}): Promise<Namespace[]> {
+    try {
+      const response = await axios.get<NamespaceList>(`${serviceUrl}/namespaces`, config);
+      return response.data.namespaces;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new IndexifyError(error.message, error.response?.status, error.response?.data);
+      }
+      throw new IndexifyError("Failed to list namespaces");
+    }
   }
 
-  static async createNamespace({
-    name,
-    mtlsConfig,
+  public get namespace(): string {
+    return this._namespace;
+  }
+
+  static createClient({
+    serviceUrl = DEFAULT_SERVICE_URL,
+    namespace = "default",
+    config,
   }: {
-    name: string;
-    mtlsConfig?: IMtlsConfig;
-  }): Promise<IndexifyClient> {
-    await axios.post(
-      `${DEFAULT_SERVICE_URL}/namespaces`,
-      { name } as CreateNamespace,
-      { httpsAgent: IndexifyClient.getHttpsAgent({ mtlsConfig }) }
-    );
-    return IndexifyClient.createClient({ namespace: name });
+    serviceUrl?: string;
+    namespace?: string;
+    config?: AxiosRequestConfig;
+  } = {}): IndexifyClient {
+    return new IndexifyClient(serviceUrl, namespace, config);
   }
 
-  async computeGraphs(): Promise<ComputeGraph[]> {
-    const resp = await this.client.get("compute_graphs");
-    return resp.data.compute_graphs;
+  private handleAxiosError(error: AxiosError<IndexifyAPIError>): never {
+    if (error.response) {
+      const { status, data } = error.response;
+      throw new IndexifyError(data.message || "Unknown API error", status, data);
+    } else if (error.request) {
+      throw new IndexifyError("No response received from the server");
+    } else {
+      throw new IndexifyError(`Error setting up the request: ${error.message}`);
+    }
   }
 
-  async createComputeGraph(computeGraph: ComputeGraph, code: string): Promise<void> {
-    const formData = new FormData();
-    formData.append('compute_graph', JSON.stringify(computeGraph));
-    formData.append('code', new Blob([code], { type: 'text/plain' }), 'code.py');
+  async listComputeGraphs(): Promise<ComputeGraphsList> {
+    try {
+      const response = await this.axiosInstance.get<ComputeGraphsList>('compute_graphs');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError("Failed to fetch compute graphs");
+    }
+  }
 
-    await this.client.post("compute_graphs", formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+  async createComputeGraph(computeGraphCreate: ComputeGraphCreateType): Promise<void> {
+    try {
+      const formData = new FormData();
+      formData.append('compute_graph', JSON.stringify(computeGraphCreate.compute_graph));
+      formData.append('code', new Blob([computeGraphCreate.code], { type: 'text/plain' }), 'code.py');
+
+      await this.axiosInstance.post('compute_graphs', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to create compute graph: ${computeGraphCreate.compute_graph.name}`);
+    }
   }
 
   async getComputeGraph(computeGraph: string): Promise<ComputeGraph> {
-    const resp = await this.client.get(`compute_graphs/${computeGraph}`);
-    return resp.data;
+    try {
+      const response = await this.axiosInstance.get<ComputeGraph>(`compute_graphs/${computeGraph}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to fetch compute graph: ${computeGraph}`);
+    }
   }
 
   async getGraphInvocations(computeGraph: string): Promise<GraphInvocations> {
-    const resp = await this.client.get(`compute_graphs/${computeGraph}/invocations`);
-    return resp.data;
+    try {
+      const response = await this.axiosInstance.get<GraphInvocations>(`compute_graphs/${computeGraph}/invocations`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to fetch graph invocations for: ${computeGraph}`);
+    }
   }
 
   async getInvocationResult(computeGraph: string, invocationId: string): Promise<InvocationResult> {
-    const resp = await this.client.get(`compute_graphs/${computeGraph}/invocations/${invocationId}`);
-    return resp.data;
+    try {
+      const response = await this.axiosInstance.get<InvocationResult>(`compute_graphs/${computeGraph}/invocations/${invocationId}/outputs`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to fetch invocation result: ${invocationId}`);
+    }
   }
 
   async deleteInvocation(computeGraph: string, invocationId: string): Promise<void> {
-    await this.client.delete(`compute_graphs/${computeGraph}/invocations/${invocationId}`);
+    try {
+      await this.axiosInstance.delete(`compute_graphs/${computeGraph}/invocations/${invocationId}`);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to delete invocation: ${invocationId}`);
+    }
   }
 
-  async invokeWithFile(computeGraph: string, file: Blob | string, metadata?: Record<string, any>): Promise<string> {
-    const formData = new FormData();
-    
-    if (typeof file === 'string') {
-      // Assume it's a file path in Node.js environment
-      const fs = require('fs');
-      formData.append('file', fs.createReadStream(file));
-    } else {
+  async invokeWithFile(computeGraph: string, file: File, metadata?: Record<string, any>): Promise<string> {
+    try {
+      const formData = new FormData();
       formData.append('file', file);
-    }
-    
-    if (metadata) {
-      formData.append('metadata', JSON.stringify(metadata));
-    }
+      
+      if (metadata) {
+        formData.append('metadata', JSON.stringify(metadata));
+      }
 
-    const resp = await this.client.post(`compute_graphs/${computeGraph}/invoke_file`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+      const response = await this.axiosInstance.post<{ invocation_id: string }>(
+        `compute_graphs/${computeGraph}/invoke_file`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
 
-    return resp.data.invocation_id;
+      return response.data.invocation_id;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to invoke compute graph with file: ${computeGraph}`);
+    }
   }
 
   async invokeWithObject(computeGraph: string, object: any): Promise<string> {
-    const resp = await this.client.post(`compute_graphs/${computeGraph}/invoke_object`, object);
-    return resp.data.invocation_id;
+    try {
+      const response = await this.axiosInstance.post<{ invocation_id: string }>(
+        `compute_graphs/${computeGraph}/invoke_object`,
+        object
+      );
+      return response.data.invocation_id;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to invoke compute graph with object: ${computeGraph}`);
+    }
   }
 
-  async listTasks(computeGraph: string): Promise<Task[]> {
-    const resp = await this.client.get(`compute_graphs/${computeGraph}/tasks`);
-    return resp.data.tasks;
+  async listTasks(computeGraph: string, invocationId: string): Promise<Tasks> {
+    try {
+      const response = await this.axiosInstance.get<Tasks>(`compute_graphs/${computeGraph}/invocations/${invocationId}/tasks`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to list tasks for invocation: ${invocationId}`);
+    }
   }
 
   async deleteComputeGraph(name: string): Promise<void> {
-    await this.client.delete(`compute_graphs/${name}`);
+    try {
+      await this.axiosInstance.delete(`compute_graphs/${name}`);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to delete compute graph: ${name}`);
+    }
   }
 
   generateUniqueHexId(): string {
@@ -199,4 +229,42 @@ class IndexifyClient {
   }
 }
 
+export const namespaces = async ({
+  serviceUrl = DEFAULT_SERVICE_URL,
+  config,
+}: {
+  serviceUrl?: string;
+  config?: AxiosRequestConfig;
+} = {}): Promise<Namespace[]> => {
+  try {
+    const response = await axios.get<NamespaceList>(`${serviceUrl}/namespaces`, config);
+    return response.data.namespaces;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new IndexifyError(error.message, error.response?.status, error.response?.data);
+    }
+    throw new IndexifyError("Failed to list namespaces");
+  }
+};
+
+export const createNamespace = async (
+  name: string, 
+  serviceUrl: string = DEFAULT_SERVICE_URL, 
+  config?: AxiosRequestConfig
+): Promise<void> => {
+  try {
+    await axios.post<CreateNamespace>(
+      `${serviceUrl}/namespaces`,
+      { name },
+      config
+    );
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new IndexifyError(error.message, error.response?.status, error.response?.data);
+    }
+    throw new IndexifyError(`Failed to create namespace: ${name}`);
+  }
+};
+
+export { IndexifyClient };
 export default IndexifyClient;

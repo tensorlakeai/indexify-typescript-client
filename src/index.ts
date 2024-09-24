@@ -1,42 +1,38 @@
-import ExtractionGraph from "./ExtractionGraph";
 import IndexifyClient from "./client";
-import Extractor from "./extractor";
 import {
-  INamespace,
-  IEmbeddingSchema,
-  IExtractorSchema,
-  IExtractor,
-  IIndex,
-  IContentMetadata,
-  IExtractedMetadata,
-  IExtractionPolicy,
-  ISearchIndexResponse,
-  ITask,
-  TaskStatus,
-  IDocument,
-  ISchema,
-  IContent
+  ComputeFn,
+  DynamicRouter,
+  Node,
+  ComputeGraph,
+  ComputeGraphsList,
+  CreateNamespace,
+  DataObject,
+  IndexifyAPIError,
+  InvocationResult,
+  Namespace,
+  TaskOutcome,
+  Task,
+  Tasks,
+  ComputeGraphCreateType
 } from "./types";
 
 export {
   IndexifyClient,
-  Extractor,
-  ExtractionGraph,
-  TaskStatus,
 };
 
 export type {
-  INamespace,
-  IEmbeddingSchema,
-  IExtractorSchema,
-  ISchema,
-  IExtractor,
-  IIndex,
-  IContentMetadata,
-  IExtractedMetadata,
-  IExtractionPolicy,
-  ISearchIndexResponse,
-  ITask,
-  IDocument,
-  IContent
+  ComputeFn,
+  DynamicRouter,
+  Node,
+  ComputeGraph,
+  ComputeGraphsList,
+  CreateNamespace,
+  DataObject,
+  IndexifyAPIError,
+  InvocationResult,
+  Namespace,
+  TaskOutcome,
+  Task,
+  Tasks,
+  ComputeGraphCreateType
 };
