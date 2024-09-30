@@ -1,4 +1,4 @@
-import IndexifyClient from "./client";
+import IndexifyClient, { namespaces, createNamespace, listExecutors } from "./client";
 import {
   ComputeFn,
   DynamicRouter,
@@ -13,11 +13,18 @@ import {
   TaskOutcome,
   Task,
   Tasks,
-  ComputeGraphCreateType
+  ComputeGraphCreateType,
+  ExecutorMetadata,
+  GraphVersion,
+  NamespaceList,
+  GraphInvocations
 } from "./types";
 
 export {
   IndexifyClient,
+  namespaces,
+  createNamespace,
+  listExecutors
 };
 
 export type {
@@ -34,5 +41,9 @@ export type {
   TaskOutcome,
   Task,
   Tasks,
-  ComputeGraphCreateType
+  ComputeGraphCreateType,
+  ExecutorMetadata,
+  GraphVersion,
+  NamespaceList,
+  GraphInvocations
 };
