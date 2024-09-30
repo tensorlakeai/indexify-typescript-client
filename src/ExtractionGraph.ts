@@ -1,10 +1,9 @@
-import { IExtractionPolicy } from "./types";
 import yaml from "yaml";
 
 class ExtractionGraph {
   constructor(
     public readonly name: string,
-    public readonly extraction_policies: IExtractionPolicy[],
+    public readonly extraction_policies: any[],
     public readonly id?: string,
     public readonly namespace?: string
   ) {}
