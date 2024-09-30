@@ -248,19 +248,25 @@ class IndexifyClient {
       throw new IndexifyError(`Failed to download logs for invocation: ${invocationId}, function: ${fnName}, file: ${file}`);
     }
   }
-
-  async listExecutors(): Promise<ExecutorMetadata[]> {
-    try {
-      const response = await axios.get<ExecutorMetadata[]>(`${this.serviceUrl}/internal/executors`);
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        this.handleAxiosError(error);
-      }
-      throw new IndexifyError("Failed to list executors");
-    }
-  }
 }
+
+export const listExecutors = async ({
+  serviceUrl = DEFAULT_SERVICE_URL,
+  config,
+}: {
+  serviceUrl?: string;
+  config?: AxiosRequestConfig;
+} = {}): Promise<ExecutorMetadata[]> => {
+  try {
+    const response = await axios.get<{ executors: ExecutorMetadata[] }>(`${serviceUrl}/internal/executors`, config);
+    return response.data.executors;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new IndexifyError(error.message, error.response?.status, error.response?.data);
+    }
+    throw new IndexifyError("Failed to list executors");
+  }
+};
 
 export const namespaces = async ({
   serviceUrl = DEFAULT_SERVICE_URL,
