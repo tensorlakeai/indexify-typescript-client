@@ -2,6 +2,9 @@ export interface ComputeFn {
   name: string;
   fn_name: string;
   description: string;
+  reducer: boolean;
+  payload_encoder: string;
+  image_name: string;
 }
 
 export interface DynamicRouter {
@@ -9,6 +12,8 @@ export interface DynamicRouter {
   source_fn: string;
   description: string;
   target_fns: string[];
+  payload_encoder: string;
+  image_name: string;
 }
 
 export type Node = 
@@ -36,7 +41,6 @@ export interface CreateNamespace {
 
 export interface DataObject {
   id: string;
-  payload: any;
   payload_size: number;
   payload_sha_256: string;
 }
@@ -67,6 +71,8 @@ export interface NamespaceList {
 
 export type TaskOutcome = "Unknown" | "Success" | "Failure";
 
+export type GraphVersion = string;
+
 export interface Task {
   id: string;
   namespace: string;
@@ -75,6 +81,8 @@ export interface Task {
   invocation_id: string;
   input_key: string;
   outcome: TaskOutcome;
+  graph_version: GraphVersion;
+  reducer_output_id?: string | null;
 }
 
 export interface Tasks {
@@ -87,3 +95,9 @@ export interface ComputeGraphCreateType {
   code: string;
 }
 
+export interface ExecutorMetadata {
+  id: string;
+  addr: string;
+  image_name: string;
+  labels: Record<string, any>;
+}

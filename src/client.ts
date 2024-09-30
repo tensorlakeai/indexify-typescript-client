@@ -11,7 +11,8 @@ import {
   ComputeGraphCreateType,
   ComputeGraphsList,
   GraphInvocations,
-  NamespaceList
+  NamespaceList,
+  ExecutorMetadata
 } from "./types";
 
 const DEFAULT_SERVICE_URL = "http://localhost:8900";
@@ -226,6 +227,38 @@ class IndexifyClient {
 
   generateHashFromString(inputString: string): string {
     return CryptoJS.SHA256(inputString).toString(CryptoJS.enc.Hex).substring(0, 16);
+  }
+
+  async downloadLogs(
+    computeGraph: string,
+    invocationId: string,
+    fnName: string,
+    file: string
+  ): Promise<string> {
+    try {
+      const response = await this.axiosInstance.get<string>(
+        `compute_graphs/${computeGraph}/invocations/${invocationId}/fn/${fnName}/logs/${file}`,
+        { responseType: 'text' }
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError(`Failed to download logs for invocation: ${invocationId}, function: ${fnName}, file: ${file}`);
+    }
+  }
+
+  async listExecutors(): Promise<ExecutorMetadata[]> {
+    try {
+      const response = await axios.get<ExecutorMetadata[]>(`${this.serviceUrl}/internal/executors`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        this.handleAxiosError(error);
+      }
+      throw new IndexifyError("Failed to list executors");
+    }
   }
 }
 
